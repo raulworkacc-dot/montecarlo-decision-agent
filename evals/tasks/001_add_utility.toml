@@ -1,0 +1,13 @@
+id = "001-add-utility"
+description = "Tarea simple con test: verifica el flujo basico del arnes"
+
+prompt = """
+Anade en src/harness/utils.py una funcion `clip01(x: float) -> float` que limite x al
+rango [0, 1]. Incluye sus tests en tests/test_utils.py.
+"""
+
+[checks]
+just_check = true
+files_exist = ["src/harness/utils.py", "tests/test_utils.py"]
+protected = ["protected", "pyproject.toml", ".claude"]
+tests_preserved = true

@@ -1,0 +1,24 @@
+image: python:3.11
+
+definitions:
+  caches:
+    uv: ~/.cache/uv
+  steps:
+    - step: &check
+        name: Lint y tests (just check)
+        max-time: 10
+        caches:
+          - uv
+        script:
+          - export UV_LINK_MODE=copy
+          - pip install --quiet uv rust-just
+          - just setup
+          - just check
+
+pipelines:
+  branches:
+    main:
+      - step: *check
+  pull-requests:
+    '**':
+      - step: *check
