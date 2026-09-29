@@ -1,0 +1,1732 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Agente de Decision Comercial</title>
+  <style>
+    :root {
+      --bg: #04111b;
+      --bg-deep: #02070d;
+      --bg-soft: #071a29;
+      --panel: rgba(7, 24, 38, 0.84);
+      --panel-strong: rgba(7, 26, 44, 0.92);
+      --line: rgba(124, 201, 227, 0.18);
+      --text: #e8fbff;
+      --muted: #88b6c7;
+      --cyan: #25e6ff;
+      --green: #27f5c6;
+      --amber: #ffd166;
+      --pink: #ff6f91;
+      --red: #ff6b6b;
+      --blue: #58a6ff;
+      --shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+      --glow: 0 0 32px rgba(37, 230, 255, 0.18);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 20% 0%, rgba(37, 230, 255, 0.13), transparent 35%),
+        radial-gradient(circle at 80% 10%, rgba(255, 209, 102, 0.10), transparent 28%),
+        radial-gradient(circle at 50% 120%, rgba(88, 166, 255, 0.12), transparent 35%),
+        linear-gradient(180deg, #04111b 0%, #02070d 100%);
+      font-family: "Segoe UI Variable Text", Bahnschrift, "Segoe UI", Arial, sans-serif;
+      min-height: 100vh;
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background: repeating-linear-gradient(180deg, rgba(255,255,255,0.03) 0 1px, transparent 1px 4px);
+      opacity: 0.18;
+      mix-blend-mode: screen;
+      animation: scan 10s linear infinite;
+    }
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background: radial-gradient(circle at 50% 0%, rgba(37, 230, 255, 0.07), transparent 42%);
+    }
+    .shell {
+      width: min(1660px, calc(100vw - 32px));
+      margin: 0 auto;
+      padding: 24px 0 48px;
+      position: relative;
+    }
+    .hero, .panel, .metric, .tool-card, .stage-button, .console, .table-wrap {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      box-shadow: var(--shadow), var(--glow);
+      backdrop-filter: blur(12px);
+      border-radius: 24px;
+    }
+    .hero {
+      padding: 28px;
+      position: relative;
+      overflow: hidden;
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 18px;
+    }
+    .hero::before {
+      content: "";
+      position: absolute;
+      inset: -20% auto auto -10%;
+      width: 60%;
+      height: 200%;
+      background: conic-gradient(from 90deg, transparent, rgba(37, 230, 255, 0.12), transparent 30%);
+      animation: rotate 10s linear infinite;
+    }
+    .hero::after {
+      content: "";
+      position: absolute;
+      inset: auto -10% -55% 45%;
+      width: 52%;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      border: 1px solid rgba(124, 201, 227, 0.12);
+      box-shadow: inset 0 0 80px rgba(37, 230, 255, 0.06);
+      opacity: 0.65;
+    }
+    .hero-copy, .hero-status { position: relative; z-index: 1; }
+    h1, .verdict, .panel-title, .stage-title, .metric-value, .status-big {
+      font-family: "Bahnschrift SemiCondensed", "Arial Narrow", Bahnschrift, sans-serif;
+    }
+    .eyebrow {
+      text-transform: uppercase;
+      letter-spacing: 0.22em;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    h1 {
+      margin: 10px 0 12px;
+      font-size: clamp(34px, 4vw, 56px);
+      line-height: 0.95;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .hero p {
+      max-width: 760px;
+      color: #b6d9e4;
+      font-size: 16px;
+      line-height: 1.6;
+      margin: 0;
+    }
+    .hero-grid {
+      margin-top: 22px;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .metric {
+      padding: 16px;
+      min-height: 110px;
+      position: relative;
+      overflow: hidden;
+    }
+    .metric::after {
+      content: "";
+      position: absolute;
+      inset: auto 0 0 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--cyan), var(--green));
+      box-shadow: 0 0 20px rgba(37, 230, 255, 0.45);
+    }
+    .metric-label {
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .metric-value {
+      margin-top: 10px;
+      font-size: 28px;
+      font-weight: 700;
+      color: white;
+    }
+    .hero-status {
+      display: grid;
+      gap: 16px;
+      align-content: stretch;
+    }
+    .mission-hud {
+      border: 1px solid var(--line);
+      background: var(--panel-strong);
+      border-radius: 24px;
+      box-shadow: var(--shadow), var(--glow);
+      padding: 18px;
+      display: grid;
+      grid-template-columns: 180px 1fr;
+      gap: 18px;
+      position: relative;
+      overflow: hidden;
+    }
+    .mission-hud::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent 28%, transparent 72%, rgba(37,230,255,0.05));
+      pointer-events: none;
+    }
+    .status-orbit {
+      display: grid;
+      place-items: center;
+    }
+    .status-ring {
+      width: 164px;
+      height: 164px;
+      border-radius: 50%;
+      position: relative;
+      display: grid;
+      place-items: center;
+      background: conic-gradient(from 0deg, rgba(37,230,255,0.75), rgba(39,245,198,0.18), rgba(255,255,255,0.04) 72%, rgba(37,230,255,0.75));
+      box-shadow: 0 0 44px rgba(37,230,255,0.18);
+    }
+    .status-ring::before {
+      content: "";
+      position: absolute;
+      inset: 16px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 50% 35%, #0c2034, #04101a 68%);
+      border: 1px solid rgba(120,201,227,0.18);
+    }
+    .status-ring::after {
+      content: "";
+      position: absolute;
+      inset: 30px;
+      border-radius: 50%;
+      border: 1px dashed rgba(120,201,227,0.16);
+      animation: rotate 18s linear infinite;
+    }
+    .status-core {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      padding: 0 12px;
+    }
+    .status-big {
+      font-size: 30px;
+      line-height: 1;
+      margin-top: 8px;
+      color: white;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+    .status-sub {
+      margin-top: 8px;
+      font-size: 13px;
+      color: #a9cfdb;
+      line-height: 1.45;
+    }
+    .status-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      align-content: center;
+    }
+    .hud-chip {
+      border: 1px solid rgba(124, 201, 227, 0.16);
+      border-radius: 18px;
+      background: rgba(4, 17, 27, 0.72);
+      padding: 14px 16px;
+      min-height: 88px;
+    }
+    .hud-chip-label {
+      font-size: 11px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .hud-chip-value {
+      margin-top: 10px;
+      font-size: 21px;
+      line-height: 1.1;
+      color: white;
+    }
+    .hud-chip-copy {
+      margin-top: 8px;
+      color: #a7c9d5;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+    .console {
+      padding: 18px;
+      min-height: 220px;
+      position: relative;
+      overflow: hidden;
+    }
+    .console::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent 35%, transparent 70%, rgba(37,230,255,0.05));
+      pointer-events: none;
+    }
+    .console-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+      font-size: 12px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .console-head-right {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+    .console-command {
+      color: var(--cyan);
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 13px;
+    }
+    .console-log {
+      display: grid;
+      gap: 10px;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 13px;
+      color: #d9f6ff;
+    }
+    .progress-shell {
+      margin-top: 18px;
+      height: 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--line);
+      overflow: hidden;
+    }
+    .progress-fill {
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, var(--cyan), var(--green), var(--amber));
+      box-shadow: 0 0 24px rgba(37,230,255,0.35);
+      transition: width 0.18s linear;
+    }
+    .toolbar {
+      margin-top: 18px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .action {
+      border: 1px solid rgba(124, 201, 227, 0.25);
+      background: rgba(4, 17, 27, 0.8);
+      color: var(--text);
+      border-radius: 999px;
+      padding: 12px 16px;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      font-size: 11px;
+      cursor: pointer;
+      transition: transform 0.2s ease, border-color 0.2s ease, opacity 0.2s ease;
+    }
+    .action:hover:not(:disabled) {
+      transform: translateY(-1px);
+      border-color: rgba(37, 230, 255, 0.35);
+    }
+    .action:disabled {
+      opacity: 0.45;
+      cursor: wait;
+    }
+    .layout {
+      margin-top: 22px;
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      gap: 22px;
+    }
+    .rail {
+      display: grid;
+      gap: 22px;
+      align-content: start;
+      position: sticky;
+      top: 20px;
+      height: max-content;
+    }
+    #stage-buttons {
+      display: grid;
+      gap: 18px;
+    }
+    .stage-button, .tool-card, .panel, .table-wrap {
+      padding: 18px;
+    }
+    .stage-button {
+      cursor: pointer;
+      transition: transform 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease;
+      position: relative;
+      overflow: hidden;
+      min-height: 148px;
+    }
+    .stage-button::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(115deg, transparent, rgba(255,255,255,0.08), transparent);
+      transform: translateX(-120%);
+      animation: sheen 3.6s linear infinite;
+      pointer-events: none;
+    }
+    .stage-button::after {
+      content: "";
+      position: absolute;
+      inset: auto 0 0 0;
+      height: 3px;
+      background: transparent;
+      transition: background 0.22s ease;
+    }
+    .stage-button:hover, .stage-button.active {
+      transform: translateY(-3px);
+      border-color: rgba(37, 230, 255, 0.45);
+      box-shadow: 0 0 0 1px rgba(37,230,255,0.15), 0 24px 80px rgba(0,0,0,0.35);
+    }
+    .stage-button.active::after {
+      background: linear-gradient(90deg, var(--cyan), var(--green));
+      box-shadow: 0 0 24px rgba(37,230,255,0.4);
+    }
+    .stage-button.running::after {
+      background: linear-gradient(90deg, var(--amber), var(--cyan));
+      box-shadow: 0 0 24px rgba(255,209,102,0.35);
+    }
+    .stage-button.done::after {
+      background: linear-gradient(90deg, var(--green), var(--cyan));
+      box-shadow: 0 0 24px rgba(39,245,198,0.30);
+    }
+    .stage-title {
+      margin-top: 8px;
+      font-size: 20px;
+      color: white;
+    }
+    .stage-copy {
+      margin-top: 8px;
+      color: #a9cfdb;
+      line-height: 1.5;
+      font-size: 14px;
+    }
+    .main {
+      display: grid;
+      gap: 22px;
+    }
+    .stage-pane {
+      display: none;
+      gap: 22px;
+    }
+    .stage-pane.active {
+      display: grid;
+      animation: fadeIn 0.35s ease;
+    }
+    .briefing-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+      gap: 22px;
+      align-items: start;
+      min-height: 100%;
+    }
+    .briefing-stack {
+      display: grid;
+      gap: 22px;
+      align-content: start;
+    }
+    .method-panel {
+      min-height: 100%;
+      display: grid;
+      gap: 14px;
+      align-content: start;
+      background: linear-gradient(180deg, rgba(7,26,44,.94), rgba(4,17,27,.88));
+    }
+    .method-steps {
+      margin: 0;
+      padding-left: 20px;
+      display: grid;
+      gap: 10px;
+      color: #a7c9d5;
+      line-height: 1.55;
+    }
+    .method-steps strong { color: var(--text); }
+    .notice {
+      border: 1px solid rgba(255, 209, 102, 0.35);
+      border-radius: 14px;
+      padding: 12px 14px;
+      color: #ffe3a3;
+      background: rgba(255, 209, 102, 0.06);
+      line-height: 1.5;
+      font-size: 14px;
+    }
+    .tag.ok { border-color: rgba(39, 245, 198, 0.45); color: var(--green); }
+    .tag.fail { border-color: rgba(255, 92, 138, 0.55); color: var(--pink); }
+    .memo-source { margin: 10px 0 4px; }
+    .panel-title {
+      margin: 0 0 6px;
+      font-size: 20px;
+      color: white;
+    }
+    .panel-copy {
+      margin: 0;
+      color: #a7c9d5;
+      line-height: 1.6;
+    }
+    .kpi-grid, .insight-grid, .summary-grid, .report-grid, .model-grid, .tech-grid, .montecarlo-grid {
+      display: grid;
+      gap: 14px;
+    }
+    .kpi-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .summary-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .insight-grid, .report-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .model-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .tech-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .montecarlo-grid { grid-template-columns: 1fr; }
+    .tool-name {
+      font-size: 16px;
+      color: white;
+      margin: 8px 0;
+    }
+    .tool-card {
+      position: relative;
+      overflow: hidden;
+    }
+    .tool-card::before {
+      content: "";
+      position: absolute;
+      inset: -20% -35%;
+      background: linear-gradient(115deg, transparent, rgba(255,255,255,0.06), transparent);
+      transform: translateX(-120%);
+      animation: sheen 4s linear infinite;
+      pointer-events: none;
+    }
+    .tool-purpose {
+      color: #a8cfdb;
+      line-height: 1.55;
+      font-size: 14px;
+    }
+    .bars, .uplift-cards, .summary-cards {
+      display: grid;
+      gap: 12px;
+    }
+    .bar-row {
+      display: grid;
+      grid-template-columns: 220px 1fr 110px;
+      gap: 12px;
+      align-items: center;
+    }
+    .bar-track {
+      height: 18px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(124, 201, 227, 0.12);
+      overflow: hidden;
+    }
+    .bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--cyan), var(--green));
+      position: relative;
+    }
+    .bar-fill.red { background: linear-gradient(90deg, var(--red), #ff9c7a); }
+    .bar-fill.amber { background: linear-gradient(90deg, var(--amber), #ffef99); }
+    .line-shell {
+      height: 280px;
+      position: relative;
+      border-radius: 18px;
+      background: rgba(4,17,27,0.72);
+      border: 1px solid rgba(124, 201, 227, 0.14);
+      overflow: hidden;
+    }
+    .line-shell svg { width: 100%; height: 100%; display: block; }
+    .mini-chart {
+      height: 240px;
+      border-radius: 18px;
+      background: rgba(4,17,27,0.72);
+      border: 1px solid rgba(124, 201, 227, 0.14);
+      overflow: hidden;
+    }
+    .mini-chart svg { width: 100%; height: 100%; display: block; }
+    .table-wrap {
+      overflow: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 720px;
+    }
+    th, td {
+      padding: 12px 10px;
+      text-align: left;
+      border-bottom: 1px solid rgba(124, 201, 227, 0.10);
+      font-size: 13px;
+    }
+    th {
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      font-size: 11px;
+      color: var(--muted);
+      position: sticky;
+      top: 0;
+      background: rgba(7,24,38,0.95);
+    }
+    .iframe-shell {
+      position: relative;
+      border-radius: 22px;
+      overflow: hidden;
+      border: 1px solid rgba(124, 201, 227, 0.16);
+      background: #02070d;
+      min-height: 1040px;
+      box-shadow: inset 0 0 80px rgba(37,230,255,0.08);
+    }
+    .montecarlo-placeholder {
+      position: absolute;
+      inset: 18px;
+      z-index: 3;
+      display: none;
+      place-items: center;
+      border-radius: 18px;
+      border: 1px solid rgba(124, 201, 227, 0.18);
+      background: radial-gradient(circle at 50% 0%, rgba(37,230,255,0.10), rgba(4,17,27,0.92) 55%);
+      padding: 28px;
+      text-align: center;
+    }
+    .montecarlo-placeholder.is-visible {
+      display: grid;
+    }
+    .placeholder-ring {
+      width: 124px;
+      height: 124px;
+      border-radius: 50%;
+      border: 2px solid rgba(124, 201, 227, 0.16);
+      border-top-color: var(--cyan);
+      box-shadow: 0 0 32px rgba(37,230,255,0.16);
+      animation: rotate 1.2s linear infinite;
+      margin: 0 auto 18px;
+    }
+    .placeholder-title {
+      font-size: 24px;
+      color: white;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .placeholder-copy {
+      margin-top: 10px;
+      max-width: 520px;
+      color: #b6d9e4;
+      line-height: 1.7;
+    }
+    .iframe-shell::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle, rgba(25,230,255,.06) 0 1px, transparent 1px),
+        linear-gradient(90deg, rgba(25,230,255,.05) 1px, transparent 1px),
+        linear-gradient(180deg, rgba(25,230,255,.05) 1px, transparent 1px);
+      background-size: 28px 28px, 28px 28px, 28px 28px;
+      mask-image: radial-gradient(circle at center, black 30%, transparent 86%);
+      opacity: 0.85;
+      pointer-events: none;
+      z-index: 1;
+    }
+    .iframe-shell::after {
+      content: "";
+      position: absolute;
+      inset: 22px;
+      border-radius: 50%;
+      background: conic-gradient(from 0deg, rgba(39,245,198,.18), transparent 52deg, transparent 360deg);
+      filter: blur(2px);
+      mix-blend-mode: screen;
+      animation: rotate 6s linear infinite;
+      opacity: 0.55;
+      pointer-events: none;
+      z-index: 1;
+    }
+    iframe {
+      position: relative;
+      z-index: 2;
+      width: 100%;
+      min-height: 1040px;
+      border: 0;
+      background: #02070d;
+      overflow: hidden;
+    }
+    .panel-radar {
+      background: linear-gradient(180deg, rgba(7,26,44,.94), rgba(4,17,27,.88));
+    }
+    .panel-hud {
+      background: linear-gradient(180deg, rgba(7,24,38,.9), rgba(4,17,27,.82));
+    }
+    .bullet-list {
+      margin: 14px 0 0;
+      padding-left: 18px;
+      color: #cfeaf2;
+      line-height: 1.7;
+    }
+    .audience-switch {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 18px 0 10px;
+    }
+    .audience-chip {
+      min-width: 132px;
+      border: 1px solid rgba(124, 201, 227, 0.22);
+      background: linear-gradient(180deg, rgba(9, 28, 47, 0.96), rgba(5, 18, 31, 0.96));
+      color: #d7edf5;
+      padding: 12px 16px;
+      border-radius: 16px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: transform 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .audience-chip.active {
+      color: #06111b;
+      background: linear-gradient(135deg, #27f5c6, #7cc9e3);
+      border-color: transparent;
+      box-shadow: 0 12px 30px rgba(39, 245, 198, 0.24);
+    }
+    .audience-chip:hover {
+      transform: translateY(-1px);
+    }
+    .audience-caption {
+      color: #7cc9e3;
+      font-size: 11px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      margin-top: 4px;
+    }
+    .audience-summary {
+      color: #9fc4d1;
+      margin-top: 4px;
+      line-height: 1.6;
+    }
+    .trace-list {
+      display: grid;
+      gap: 12px;
+      margin-top: 18px;
+    }
+    .trace-item {
+      padding: 14px 16px;
+      border-radius: 16px;
+      border: 1px solid rgba(124, 201, 227, 0.12);
+      background: linear-gradient(180deg, rgba(10, 28, 47, 0.96), rgba(6, 18, 31, 0.96));
+    }
+    .trace-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 6px;
+    }
+    .trace-name {
+      font-size: 14px;
+      font-weight: 700;
+      color: #eff8fb;
+      letter-spacing: 0.04em;
+    }
+    .trace-args {
+      color: #7cc9e3;
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .trace-purpose {
+      color: #9fc4d1;
+      font-size: 13px;
+      margin-bottom: 6px;
+    }
+    .trace-outcome {
+      color: #dcecf2;
+      line-height: 1.6;
+      font-size: 14px;
+    }
+    .tag-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+    .tag {
+      border: 1px solid rgba(124, 201, 227, 0.18);
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: var(--muted);
+      background: rgba(4,17,27,0.7);
+    }
+    .status-chip {
+      border: 1px solid rgba(124, 201, 227, 0.24);
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: #dff8ff;
+      background: rgba(4,17,27,0.82);
+    }
+    .status-chip.ready {
+      border-color: rgba(39,245,198,0.30);
+      color: #b9fff0;
+    }
+    .status-chip.running {
+      border-color: rgba(255,209,102,0.35);
+      color: #fff3c0;
+      box-shadow: 0 0 24px rgba(255,209,102,0.10);
+    }
+    .status-chip.alert {
+      border-color: rgba(255,107,107,0.38);
+      color: #ffd1d1;
+    }
+    .verdict {
+      font-size: clamp(28px, 3vw, 42px);
+      line-height: 1.05;
+      margin: 6px 0 12px;
+      text-transform: uppercase;
+      color: white;
+    }
+    .flash {
+      animation: flash 0.4s ease;
+    }
+    @keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    @keyframes sheen { from { transform: translateX(-120%); } to { transform: translateX(120%); } }
+    @keyframes scan { from { transform: translateY(-4px); } to { transform: translateY(4px); } }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes flash {
+      0% { box-shadow: 0 0 0 1px rgba(37,230,255,0.15), 0 24px 80px rgba(0,0,0,0.35); }
+      50% { box-shadow: 0 0 0 1px rgba(37,230,255,0.35), 0 0 40px rgba(37,230,255,0.20), 0 24px 80px rgba(0,0,0,0.35); }
+      100% { box-shadow: 0 0 0 1px rgba(37,230,255,0.15), 0 24px 80px rgba(0,0,0,0.35); }
+    }
+    @media (max-width: 1200px) {
+      .hero, .layout, .insight-grid, .report-grid, .model-grid, .mission-hud, .briefing-grid { grid-template-columns: 1fr; }
+      .kpi-grid, .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .tech-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .rail { position: static; }
+    }
+    @media (max-width: 760px) {
+      .shell { width: min(100vw - 16px, 100%); padding-top: 16px; }
+      .hero-grid, .kpi-grid, .summary-grid, .tech-grid { grid-template-columns: 1fr; }
+      .bar-row { grid-template-columns: 1fr; }
+      .status-grid { grid-template-columns: 1fr; }
+      .stage-button, .tool-card, .panel, .table-wrap, .console { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <section class="hero">
+      <div class="hero-copy">
+        <div class="eyebrow">Consola ejecutiva</div>
+        <h1 id="hero-title"></h1>
+        <p id="hero-subtitle"></p>
+        <div class="hero-grid" id="hero-kpis"></div>
+      </div>
+      <div class="hero-status">
+        <section class="mission-hud">
+          <div class="status-orbit">
+            <div class="status-ring">
+              <div class="status-core">
+                <div class="eyebrow" id="hud-active-stage">Fase 01</div>
+                <div class="status-big" id="hud-active-title">Introduccion</div>
+                <div class="status-sub" id="hud-active-copy">Consola lista para recorrer el caso completo.</div>
+              </div>
+            </div>
+          </div>
+          <div class="status-grid">
+            <article class="hud-chip">
+              <div class="hud-chip-label">Runtime</div>
+              <div class="hud-chip-value" id="hud-runtime">Modo local</div>
+              <div class="hud-chip-copy">Estado del backend y de la sincronizacion de etapas.</div>
+            </article>
+            <article class="hud-chip">
+              <div class="hud-chip-label">Estado live</div>
+              <div class="hud-chip-value" id="hud-live">Sin backend</div>
+              <div class="hud-chip-copy">Situacion actual del panel Monte Carlo en tiempo real.</div>
+            </article>
+            <article class="hud-chip">
+              <div class="hud-chip-label">Cobertura</div>
+              <div class="hud-chip-value">5 fases</div>
+              <div class="hud-chip-copy">De exploracion inicial a recomendacion priorizada.</div>
+            </article>
+            <article class="hud-chip">
+              <div class="hud-chip-label">Simulacion</div>
+              <div class="hud-chip-value" id="hud-simulations">-</div>
+              <div class="hud-chip-copy">Exploracion de retorno esperado, dispersion y riesgo de perdida.</div>
+            </article>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <section class="layout">
+      <aside class="rail">
+        <div id="stage-buttons"></div>
+      </aside>
+
+      <main class="main">
+        <section class="stage-pane" id="pane-briefing">
+          <div class="briefing-grid">
+            <div class="briefing-stack">
+              <section class="panel">
+                <div class="eyebrow">Vision general</div>
+                <h2 class="panel-title">Una sola interfaz para recorrer todo el caso</h2>
+                <p class="panel-copy">La aplicacion articula un flujo completo para analizar la base historica, estimar el comportamiento esperado, cuantificar el uplift de cada palanca, simular miles de escenarios y cerrar con una recomendacion priorizada.</p>
+                <div class="tag-row" id="briefing-tags"></div>
+              </section>
+              <section class="console" id="console-panel">
+              <div class="console-head">
+                <span>Estado operativo</span>
+                <div class="console-head-right">
+                  <span class="status-chip" id="console-runtime-badge">Modo local</span>
+                  <span class="status-chip" id="console-live-badge">Sin backend</span>
+                  <span id="console-stage-label"></span>
+                </div>
+              </div>
+              <div class="console-command" id="console-command"></div>
+              <div class="console-log" id="console-log"></div>
+              <div class="progress-shell"><div class="progress-fill" id="progress-fill"></div></div>
+              <div class="toolbar">
+                <button class="action" id="autoplay-btn">Secuencia automatica</button>
+                <button class="action" id="reset-btn">Volver al briefing</button>
+              </div>
+              </section>
+            </div>
+            <section class="panel method-panel">
+              <div class="eyebrow">Como se construye la recomendacion</div>
+              <h2 class="panel-title">Metodologia en cinco pasos</h2>
+              <ol class="method-steps">
+                <li><strong>Historico sintetico</strong> con un proceso generador conocido, para poder comprobar si el analisis recupera los efectos reales.</li>
+                <li><strong>Modelos</strong> de conversion, ticket y margen, validados sobre los meses mas recientes y con control del efecto calendario.</li>
+                <li><strong>Contrafactuales</strong>: se fuerza cada palanca sobre las mismas oportunidades y se mide el valor incremental, con intervalo bootstrap.</li>
+                <li><strong>Monte Carlo</strong> sobre la incertidumbre del modelo, la mezcla y el volumen de oportunidades y el riesgo de ejecucion de cada iniciativa.</li>
+                <li><strong>Memo del agente</strong>: Claude consulta las herramientas del analisis y redacta la recomendacion (o, sin API key, un memo basado en reglas).</li>
+              </ol>
+              <div class="notice">Los datos son sinteticos. Las cifras ilustran el metodo, no el rendimiento de un negocio real.</div>
+              <div class="tag-row" id="briefing-checks"></div>
+            </section>
+          </div>
+        </section>
+
+        <section class="stage-pane" id="pane-ingesta">
+          <div class="kpi-grid" id="dataset-kpis"></div>
+          <div class="insight-grid">
+            <section class="panel">
+              <div class="eyebrow">Cobertura del caso</div>
+              <h2 class="panel-title">Que informacion tiene disponible el agente</h2>
+              <p class="panel-copy">Antes de modelizar conviene comprobar que el caso tiene suficiente diversidad comercial: campañas, variables, segmentos, geografias y ventana temporal.</p>
+              <div class="kpi-grid" id="dataset-structure-cards"></div>
+            </section>
+            <section class="panel">
+              <div class="eyebrow">Serie temporal</div>
+              <h2 class="panel-title">Evolucion mensual del negocio</h2>
+              <p class="panel-copy">La serie de revenue y beneficio de contribucion da contexto sobre la estabilidad del negocio antes de evaluar nuevas palancas.</p>
+              <div class="line-shell"><svg id="monthly-chart" viewBox="0 0 680 280" preserveAspectRatio="none"></svg></div>
+            </section>
+          </div>
+          <section class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Canal</th>
+                  <th>Segmento</th>
+                  <th>Objetivo</th>
+                  <th>Lead score</th>
+                  <th>Conversion</th>
+                  <th>Revenue</th>
+                  <th>Beneficio contribucion</th>
+                </tr>
+              </thead>
+              <tbody id="sample-table"></tbody>
+            </table>
+          </section>
+        </section>
+
+        <section class="stage-pane" id="pane-uplift">
+          <div class="model-grid">
+            <section class="panel">
+              <div class="eyebrow">Modelo 01</div>
+              <h2 class="panel-title">Regresion logistica para probabilidad de exito</h2>
+              <p class="panel-copy">Este modelo estima la probabilidad de cierre de cada oportunidad usando señales de canal, segmento, calidad del lead y contexto comercial.</p>
+              <div class="tech-grid" id="classification-kpis"></div>
+              <div class="mini-chart" style="margin-top:14px"><svg id="gain-chart" viewBox="0 0 680 240" preserveAspectRatio="none"></svg></div>
+            </section>
+            <section class="panel">
+              <div class="eyebrow">Modelo 02</div>
+              <h2 class="panel-title">Gradient boosting para valor esperado</h2>
+              <p class="panel-copy">Este modelo estima el valor economico de las oportunidades que convierten y ayuda a traducir propension en impacto monetario.</p>
+              <div class="tech-grid" id="regression-kpis"></div>
+              <div class="bars" id="residual-bars" style="margin-top:14px"></div>
+            </section>
+          </div>
+          <section class="panel">
+            <div class="eyebrow">Palancas de negocio</div>
+            <h2 class="panel-title">Escenarios con mayor uplift esperado</h2>
+            <p class="panel-copy">Aqui se muestran las iniciativas mejor posicionadas segun el analisis contrafactual: cuanto mejoran la conversion y cuanto valor añaden por oportunidad.</p>
+            <div class="uplift-cards" id="uplift-cards"></div>
+          </section>
+        </section>
+
+        <section class="stage-pane" id="pane-montecarlo">
+          <div class="montecarlo-grid">
+            <section class="panel">
+              <div class="eyebrow">Simulacion en directo</div>
+              <h2 class="panel-title">Panel live de Monte Carlo</h2>
+              <p class="panel-copy">El radar, la telemetria y el ranking evolucionan en tiempo real mientras el agente recorre 10.000 escenarios posibles para cada decision.</p>
+              <div class="iframe-shell">
+                <div class="montecarlo-placeholder" id="montecarlo-placeholder">
+                  <div>
+                    <div class="placeholder-ring"></div>
+                    <div class="placeholder-title" id="montecarlo-placeholder-title">Precalculando simulacion</div>
+                    <div class="placeholder-copy" id="montecarlo-placeholder-copy">El backend está preparando los elementos previos al lanzamiento. El dashboard live se mostrará en cuanto arranque la simulación real.</div>
+                  </div>
+                </div>
+                <iframe id="live-frame" title="Monte Carlo live"></iframe>
+              </div>
+            </section>
+          </div>
+          <section class="panel panel-radar">
+            <div class="eyebrow">Lectura consolidada</div>
+            <h2 class="panel-title">Ranking final de alternativas</h2>
+            <p class="panel-copy">La comparativa final resume retorno esperado, dispersión y riesgo de perdida para que la conclusion sea inmediata.</p>
+            <div class="summary-cards" id="summary-cards"></div>
+          </section>
+        </section>
+
+        <section class="stage-pane" id="pane-reporte">
+          <div class="report-grid">
+            <section class="panel">
+              <div class="eyebrow">Recomendacion final</div>
+              <div class="tag-row memo-source" id="memo-source"></div>
+              <div class="audience-caption">Selecciona enfoque de lectura</div>
+              <div class="audience-switch" id="audience-switch">
+                <button class="audience-chip active" data-audience="ceo">CEO</button>
+                <button class="audience-chip" data-audience="growth">Growth</button>
+                <button class="audience-chip" data-audience="riesgo">Riesgo</button>
+              </div>
+              <div class="audience-summary" id="audience-summary"></div>
+              <div class="verdict" id="verdict-headline"></div>
+              <p class="panel-copy" id="verdict-copy"></p>
+              <ul class="bullet-list" id="reason-list"></ul>
+            </section>
+            <section class="panel">
+              <div class="eyebrow">Riesgos y siguientes pasos</div>
+              <h2 class="panel-title">Puntos de control para la decision</h2>
+              <ul class="bullet-list" id="watchouts-list"></ul>
+              <div class="tag-row" id="report-checks"></div>
+            </section>
+          </div>
+          <div class="report-grid">
+            <section class="panel">
+              <div class="eyebrow">Consultas realizadas</div>
+              <h2 class="panel-title">Huella de herramientas</h2>
+              <div class="trace-list" id="tool-trace"></div>
+            </section>
+            <section class="panel">
+              <div class="eyebrow">Hallazgos adicionales</div>
+              <h2 class="panel-title">Lecturas complementarias</h2>
+              <ul class="bullet-list" id="agent-findings"></ul>
+            </section>
+          </div>
+          <div class="report-grid">
+            <section class="panel">
+              <div class="eyebrow">Cuando cambiaria la recomendacion</div>
+              <h2 class="panel-title">Senales para rotar la apuesta</h2>
+              <ul class="bullet-list" id="switch-signals"></ul>
+            </section>
+            <section class="panel">
+              <div class="eyebrow">Ejecucion y due diligence</div>
+              <h2 class="panel-title">Plan recomendado</h2>
+              <ul class="bullet-list" id="next-actions"></ul>
+              <h2 class="panel-title" style="margin-top:20px;">Preguntas antes de ejecutar</h2>
+              <ul class="bullet-list" id="due-diligence"></ul>
+            </section>
+          </div>
+        </section>
+      </main>
+    </section>
+  </div>
+
+  <script>
+    const PAYLOAD = __PAYLOAD__;
+    function esc(value) {
+      return String(value ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+    }
+    const AUDIENCE_META = {
+      ceo: 'Prioriza asignacion de capital, payback y claridad de decision ejecutiva.',
+      growth: 'Prioriza velocidad de aprendizaje, iteracion y escalado de palancas.',
+      riesgo: 'Prioriza control del downside, robustez del suelo y criterios de contencion.',
+    };
+    const API_BASE = window.location.protocol.startsWith('http') ? window.location.origin : '';
+    const BACKEND_ENABLED = Boolean(API_BASE);
+    const PRECOMPUTED_STAGE_KEYS = new Set(['briefing', 'ingesta', 'uplift']);
+    const state = {
+      activeStage: 'briefing',
+      audience: 'ceo',
+      autoTimer: null,
+      progressTimer: null,
+      autoplay: false,
+      montecarloPollHandle: null,
+      stageStatus: {},
+      backendReady: false,
+    };
+
+    function replacePayload(nextPayload) {
+      Object.keys(PAYLOAD).forEach((key) => delete PAYLOAD[key]);
+      Object.assign(PAYLOAD, nextPayload);
+    }
+
+    async function fetchJson(url, options = {}) {
+      const response = await fetch(url, options);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      return response.json();
+    }
+
+    function setConsoleBadges(runtimeText, runtimeMode, liveText, liveMode) {
+      const runtime = document.getElementById('console-runtime-badge');
+      const live = document.getElementById('console-live-badge');
+      runtime.className = `status-chip ${runtimeMode || ''}`.trim();
+      runtime.textContent = runtimeText;
+      live.className = `status-chip ${liveMode || ''}`.trim();
+      live.textContent = liveText;
+      const hudRuntime = document.getElementById('hud-runtime');
+      const hudLive = document.getElementById('hud-live');
+      if (hudRuntime) hudRuntime.textContent = runtimeText;
+      if (hudLive) hudLive.textContent = liveText;
+    }
+
+    function setConsoleOutput(stage, lines) {
+      if (!stage) return;
+      document.getElementById('console-stage-label').textContent = `${stage.eyebrow} · ${stage.title}`;
+      document.getElementById('console-command').textContent = stage.command;
+      document.getElementById('console-log').innerHTML = lines.map((line) => `<div>${esc(line)}</div>`).join('');
+      const hudStage = document.getElementById('hud-active-stage');
+      const hudTitle = document.getElementById('hud-active-title');
+      const hudCopy = document.getElementById('hud-active-copy');
+      if (hudStage) hudStage.textContent = stage.eyebrow;
+      if (hudTitle) hudTitle.textContent = stage.title;
+      if (hudCopy) hudCopy.textContent = stage.tagline;
+    }
+
+    function updateStageDecorators() {
+      document.querySelectorAll('.stage-button').forEach((button) => {
+        const status = state.stageStatus[button.dataset.stage] || {};
+        button.classList.toggle('running', Boolean(status.running));
+        button.classList.toggle('done', Boolean(status.done));
+        button.classList.toggle('active', button.dataset.stage === state.activeStage);
+      });
+    }
+
+    function fmtCurrency(value) {
+      return Number(value || 0).toLocaleString('es-ES', { maximumFractionDigits: 0 }) + ' EUR';
+    }
+
+    function fmtPct(value) {
+      return (Number(value || 0) * 100).toFixed(1) + '%';
+    }
+
+    function fmtEuro1(value) {
+      return Number(value || 0).toLocaleString('es-ES', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' EUR';
+    }
+
+    function fmtPctNumber(value) {
+      return Number(value || 0).toFixed(1) + '%';
+    }
+
+    function asArray(value) {
+      return Array.isArray(value) ? value : [];
+    }
+
+    function asObject(value) {
+      return value && typeof value === 'object' ? value : {};
+    }
+
+    function createMetric(label, value, sub) {
+      return `<article class="metric"><div class="metric-label">${esc(label)}</div><div class="metric-value">${esc(value)}</div><div class="stage-copy">${esc(sub)}</div></article>`;
+    }
+
+    function renderHero() {
+      document.getElementById('hero-title').textContent = PAYLOAD.title;
+      document.getElementById('hero-subtitle').textContent = PAYLOAD.subtitle;
+      const ds = asObject(asObject(PAYLOAD.dataset).summary);
+      const simulation = asObject(PAYLOAD.simulation);
+      const totalSimulations = Number(simulation.total_simulations || 0);
+      const metrics = [
+        createMetric('Oportunidades analizadas', ds.rows.toLocaleString('es-ES'), `${ds.period_start} -> ${ds.period_end}`),
+        createMetric('Futuros simulados', totalSimulations.toLocaleString('es-ES'), 'Por decision, con numeros aleatorios comunes'),
+        createMetric('Variables disponibles', ds.variable_count.toLocaleString('es-ES'), `${ds.segment_count} segmentos · ${ds.geography_count} geografias`),
+        createMetric('Ventanas temporales', ds.time_windows.toLocaleString('es-ES'), 'Meses historicos disponibles para la decision'),
+      ];
+      document.getElementById('hero-kpis').innerHTML = metrics.join('');
+      document.getElementById('hud-simulations').textContent = `${totalSimulations.toLocaleString('es-ES')} futuros`;
+    }
+
+    function renderBriefing() {
+      document.getElementById('briefing-tags').innerHTML = asArray(PAYLOAD.stages).map((stage) => `<span class="tag">${esc(stage.eyebrow)} · ${esc(stage.title)}</span>`).join('');
+      document.getElementById('briefing-checks').innerHTML = checkTags(asObject(PAYLOAD.report).checks);
+    }
+
+    function checkTags(checks) {
+      return asArray(checks).map((check) => `<span class="tag ${check.passed ? 'ok' : 'fail'}" title="${esc(check.detail)}">${check.passed ? '✓' : '✗'} ${esc(check.name)}</span>`).join('');
+    }
+
+    function renderStageButtons() {
+      const root = document.getElementById('stage-buttons');
+      root.innerHTML = asArray(PAYLOAD.stages).map((stage) => `
+        <button class="stage-button" data-stage="${stage.key}">
+          <div class="eyebrow">${esc(stage.eyebrow)}</div>
+          <div class="stage-title">${esc(stage.title)}</div>
+          <div class="stage-copy">${esc(stage.tagline)}</div>
+        </button>
+      `).join('');
+      root.querySelectorAll('.stage-button').forEach((button) => {
+        button.addEventListener('click', () => runStage(button.dataset.stage));
+      });
+      updateStageDecorators();
+    }
+
+    function renderDataset() {
+      const dataset = asObject(PAYLOAD.dataset);
+      const ds = asObject(dataset.summary);
+      document.getElementById('dataset-kpis').innerHTML = [
+        createMetric('Periodo cubierto', `${ds.period_start} -> ${ds.period_end}`, 'Ventana historica utilizada en el analisis'),
+        createMetric('Conversion observada', fmtPct(ds.conversion_rate), 'Tasa media de exito del historico'),
+        createMetric('Ticket medio', fmtCurrency(ds.avg_ticket_eur), 'Valor medio de las operaciones convertidas'),
+        createMetric('Beneficio acumulado', fmtCurrency(ds.contribution_profit_eur), 'Beneficio de contribucion total del historico'),
+      ].join('');
+
+      document.getElementById('dataset-structure-cards').innerHTML = [
+        createMetric('Campañas únicas', ds.campaign_count.toLocaleString('es-ES'), 'Combinaciones distintas de canal y objetivo comercial'),
+        createMetric('Variables', ds.variable_count.toLocaleString('es-ES'), 'Campos disponibles para explicar comportamiento y resultado'),
+        createMetric('Segmentos', ds.segment_count.toLocaleString('es-ES'), 'Perfiles de cliente incluidos en el caso'),
+        createMetric('Geografías', ds.geography_count.toLocaleString('es-ES'), 'Mercados presentes en la base historica'),
+      ].join('');
+
+      document.getElementById('sample-table').innerHTML = asArray(dataset.sample).map((row) => `
+        <tr>
+          <td>${esc(row.date)}</td>
+          <td>${esc(row.channel)}</td>
+          <td>${esc(row.customer_segment)}</td>
+          <td>${esc(row.campaign_objective)}</td>
+          <td>${esc(row.lead_score)}</td>
+          <td>${row.converted_to_sale ? 'Si' : 'No'}</td>
+          <td>${fmtCurrency(row.revenue_eur)}</td>
+          <td>${fmtCurrency(row.contribution_profit_eur)}</td>
+        </tr>
+      `).join('');
+
+      renderMonthlyChart();
+    }
+
+    function renderMonthlyChart() {
+      const svg = document.getElementById('monthly-chart');
+      const data = asArray(asObject(PAYLOAD.dataset).monthly);
+      if (!data.length) {
+        svg.innerHTML = '';
+        return;
+      }
+      const width = 680;
+      const height = 280;
+      const left = 42;
+      const right = 22;
+      const top = 24;
+      const bottom = 28;
+      const revenueValues = data.map((row) => Number(row.revenue_eur));
+      const profitValues = data.map((row) => Number(row.contribution_profit_eur));
+      const maxValue = Math.max(...revenueValues, ...profitValues, 1);
+      const x = (index) => left + (index / Math.max(1, data.length - 1)) * (width - left - right);
+      const y = (value) => height - bottom - (value / maxValue) * (height - top - bottom);
+      const revenuePath = data.map((row, index) => `${index === 0 ? 'M' : 'L'} ${x(index)} ${y(Number(row.revenue_eur))}`).join(' ');
+      const profitPath = data.map((row, index) => `${index === 0 ? 'M' : 'L'} ${x(index)} ${y(Number(row.contribution_profit_eur))}`).join(' ');
+      const ticks = [0, 0.33, 0.66, 1].map((ratio) => {
+        const tickY = y(maxValue * ratio);
+        return `<line x1="${left}" y1="${tickY}" x2="${width - right}" y2="${tickY}" stroke="rgba(124, 201, 227, 0.10)" />`;
+      }).join('');
+      const labels = [data[0], data[Math.floor(data.length / 2)], data[data.length - 1]].map((row, idx) => {
+        const positions = [left, width / 2, width - right];
+        return `<text x="${positions[idx]}" y="${height - 8}" fill="#88b6c7" font-size="11" text-anchor="middle">${esc(row.month)}</text>`;
+      }).join('');
+      svg.innerHTML = `
+        <defs>
+          <linearGradient id="rev-gradient" x1="0" x2="1" y1="0" y2="0">
+            <stop offset="0%" stop-color="#25e6ff"></stop>
+            <stop offset="100%" stop-color="#58a6ff"></stop>
+          </linearGradient>
+          <linearGradient id="profit-gradient" x1="0" x2="1" y1="0" y2="0">
+            <stop offset="0%" stop-color="#27f5c6"></stop>
+            <stop offset="100%" stop-color="#ffd166"></stop>
+          </linearGradient>
+        </defs>
+        ${ticks}
+        <path d="${revenuePath}" fill="none" stroke="url(#rev-gradient)" stroke-width="4" stroke-linecap="round"></path>
+        <path d="${profitPath}" fill="none" stroke="url(#profit-gradient)" stroke-width="4" stroke-linecap="round" stroke-dasharray="8 8"></path>
+        ${labels}
+      `;
+    }
+
+    function renderUplift() {
+      const models = asObject(PAYLOAD.models);
+      const classification = asObject(models.classification);
+      const regression = asObject(models.regression);
+      const gainChart = asArray(classification.gain_chart);
+      const residualBands = asArray(regression.residual_bands);
+      const uplift = asObject(PAYLOAD.uplift);
+      const mainUplift = asArray(uplift.main);
+      const adsUplift = asArray(uplift.ads);
+      document.getElementById('classification-kpis').innerHTML = [
+        createMetric('AUC fuera de muestra', Number(classification.auc).toFixed(3), 'Validacion temporal: entrena con el pasado y evalua en los meses mas recientes'),
+        createMetric('Calibracion (ECE)', Number(classification.expected_calibration_error).toFixed(3), `Conversion observada ${fmtPct(classification.positive_rate)} frente a predicha ${fmtPct(classification.avg_predicted_prob)}`),
+        createMetric('Brier score', Number(classification.brier).toFixed(3), 'Error cuadratico medio de la probabilidad predicha'),
+        createMetric('Top decil', fmtPct(gainChart[0] ? gainChart[0].conversion_rate : 0), 'Tasa de conversion del 10% de casos con mayor puntuacion'),
+      ].join('');
+
+      document.getElementById('regression-kpis').innerHTML = [
+        createMetric('MAE', fmtCurrency(regression.mae_eur), 'Error absoluto medio sobre el valor estimado'),
+        createMetric('R²', Number(regression.r2).toFixed(3), 'Capacidad del modelo para explicar variacion del ticket'),
+        createMetric('Sesgo medio', fmtCurrency(regression.mean_residual_eur), 'Diferencia media entre valor real y valor estimado'),
+        createMetric('P90 error', fmtCurrency(regression.p90_abs_error_eur), 'Error absoluto en el percentil 90'),
+      ].join('');
+
+      renderGainChart();
+      const maxResidualCount = Math.max(...residualBands.map((row) => Number(row.count)), 1);
+      document.getElementById('residual-bars').innerHTML = residualBands.map((row) => `
+        <div class="bar-row">
+          <div>
+            <div class="stage-title" style="font-size:15px">${esc(row.label)}</div>
+            <div class="stage-copy">Numero de observaciones dentro de esta banda de error</div>
+          </div>
+          <div class="bar-track"><div class="bar-fill" style="width:${Math.max(8, Number(row.count) / maxResidualCount * 100)}%"></div></div>
+          <div style="text-align:right">${Number(row.count).toLocaleString('es-ES')}</div>
+        </div>
+      `).join('');
+
+      const upliftRoot = document.getElementById('uplift-cards');
+      upliftRoot.innerHTML = mainUplift.map((row) => `
+        <article class="tool-card flash">
+          <div class="eyebrow">${esc(row.label)}</div>
+          <div class="tool-name">${fmtPct(row.baseline_conversion)} → ${fmtPct(row.scenario_conversion)} de conversion esperada</div>
+          <div class="tool-purpose">${esc(row.description)} Valor incremental: ${fmtEuro1(row.value_lift_per_opportunity_eur)} por oportunidad (IC95 ${fmtEuro1(row.value_lift_ci_low_eur)} a ${fmtEuro1(row.value_lift_ci_high_eur)}).</div>
+          <div class="tool-purpose">Validacion con la verdad sintetica: ${fmtEuro1(row.true_value_lift_per_opportunity_eur)} · Modelo ingenuo sin control temporal: ${fmtEuro1(row.naive_value_lift_per_opportunity_eur)} ${row.truth_in_interval ? '· ✓ dentro del intervalo' : '· ✗ fuera del intervalo'}</div>
+        </article>
+      `).join('');
+
+    }
+
+    function renderGainChart() {
+      const svg = document.getElementById('gain-chart');
+      const data = asArray(asObject(asObject(PAYLOAD.models).classification).gain_chart);
+      if (!data.length) {
+        svg.innerHTML = '';
+        return;
+      }
+      const width = 680;
+      const height = 240;
+      const left = 42;
+      const right = 18;
+      const top = 20;
+      const bottom = 28;
+      const x = (index) => left + (index / Math.max(1, data.length - 1)) * (width - left - right);
+      const y = (value) => height - bottom - value * (height - top - bottom);
+      const gainPath = data.map((row, index) => `${index === 0 ? 'M' : 'L'} ${x(index)} ${y(Number(row.capture_pct))}`).join(' ');
+      const basePath = `M ${left} ${y(0.1)} ${data.map((row, index) => `L ${x(index)} ${y((index + 1) / 10)}`).join(' ')}`;
+      const points = data.map((row, index) => `<circle cx="${x(index)}" cy="${y(Number(row.capture_pct))}" r="4" fill="#25e6ff"></circle>`).join('');
+      svg.innerHTML = `
+        <line x1="${left}" y1="${y(0)}" x2="${width - right}" y2="${y(0)}" stroke="rgba(124, 201, 227, 0.12)" />
+        <line x1="${left}" y1="${y(0.5)}" x2="${width - right}" y2="${y(0.5)}" stroke="rgba(124, 201, 227, 0.12)" />
+        <line x1="${left}" y1="${y(1)}" x2="${width - right}" y2="${y(1)}" stroke="rgba(124, 201, 227, 0.12)" />
+        <path d="${basePath}" fill="none" stroke="#ffd166" stroke-width="2" stroke-dasharray="8 8"></path>
+        <path d="${gainPath}" fill="none" stroke="#25e6ff" stroke-width="4" stroke-linecap="round"></path>
+        ${points}
+        <text x="${left}" y="18" fill="#88b6c7" font-size="11">Captura acumulada de conversiones</text>
+        <text x="${width - right}" y="18" text-anchor="end" fill="#88b6c7" font-size="11">Gain chart</text>
+      `;
+    }
+
+    function renderSimulation() {
+      const simulation = asObject(PAYLOAD.simulation);
+      const summary = asArray(simulation.summary);
+      document.getElementById('summary-cards').innerHTML = summary.map((row) => `
+        <article class="tool-card">
+          <div class="eyebrow">Ranking ${esc(row.ranking)}</div>
+          <div class="tool-name">${esc(row.label)}</div>
+          <div class="tool-purpose">Beneficio esperado: ${fmtCurrency(row.expected_profit_eur)} · P10: ${fmtCurrency(row.p10_eur)} · P90: ${fmtCurrency(row.p90_eur)} · CVaR 5%: ${fmtCurrency(row.cvar_5_eur)}</div>
+          <div class="tool-purpose">P(perdida): ${fmtPct(row.probability_loss)} · P(mejor opcion): ${fmtPct(row.probability_best)} · ROI: ${Number(row.expected_roi).toFixed(1)}x</div>
+        </article>
+      `).join('');
+      refreshLiveFrame(false);
+    }
+
+    function renderReport() {
+      const recommendation = asObject(PAYLOAD.recommendation);
+      const report = asObject(PAYLOAD.report);
+      const audienceViews = asObject(recommendation.audience_views);
+      const selectedView = asObject(audienceViews[state.audience]);
+      const activeView = Object.keys(selectedView).length ? selectedView : recommendation;
+      document.getElementById('audience-summary').textContent = AUDIENCE_META[state.audience] || '';
+      document.getElementById('verdict-headline').textContent = activeView.headline || recommendation.headline;
+      document.getElementById('verdict-copy').textContent = activeView.summary || recommendation.agent_summary || `${recommendation.label} lidera la simulacion con ${fmtCurrency(recommendation.expected_profit_eur)}, ROI esperado de ${Number(recommendation.expected_roi).toFixed(1)}x y probabilidad de perdida de ${fmtPct(recommendation.probability_loss)}.`;
+      document.getElementById('reason-list').innerHTML = asArray(activeView.reasons || recommendation.reasons).map((item) => `<li>${esc(item)}</li>`).join('');
+      document.getElementById('watchouts-list').innerHTML = asArray(activeView.watchouts || recommendation.watchouts).map((item) => `<li>${esc(item)}</li>`).join('');
+      document.getElementById('next-actions').innerHTML = asArray(activeView.next_actions || recommendation.next_actions).map((item) => `<li>${esc(item)}</li>`).join('');
+      document.getElementById('switch-signals').innerHTML = asArray(activeView.switch_signals || recommendation.switch_signals).map((item) => `<li>${esc(item)}</li>`).join('');
+      document.getElementById('due-diligence').innerHTML = asArray(activeView.due_diligence || recommendation.due_diligence).map((item) => `<li>${esc(item)}</li>`).join('');
+      document.getElementById('agent-findings').innerHTML = asArray(recommendation.findings).map((item) => `<li>${esc(item)}</li>`).join('');
+      document.getElementById('tool-trace').innerHTML = asArray(recommendation.tool_trace).map((item) => `
+        <article class="trace-item">
+          <div class="trace-top">
+            <div class="trace-name">${esc(item.name)}</div>
+            <div class="trace-args">${esc(item.args)}</div>
+          </div>
+          <div class="trace-purpose">${esc(item.purpose)}</div>
+          <div class="trace-outcome">${esc(item.outcome)}</div>
+        </article>
+      `).join('');
+      document.querySelectorAll('[data-audience]').forEach((button) => {
+        button.classList.toggle('active', button.dataset.audience === state.audience);
+      });
+      document.getElementById('report-checks').innerHTML = checkTags(report.checks);
+      const source = asObject(recommendation.memo_source);
+      document.getElementById('memo-source').innerHTML = source.author === 'claude'
+        ? `<span class="tag ok">Redactado por Claude · ${esc(source.model)}</span>`
+        : '<span class="tag">Memo basado en reglas deterministas (sin LLM)</span>';
+    }
+
+    function consoleLines(stage) {
+      const base = [
+        `> ${stage.command}`,
+        '> preparando la vista ejecutiva',
+        '> actualizando la consola con informacion del caso',
+      ];
+      if (stage.key === 'ingesta') return base.concat(['> cargando base historica', '> validando cobertura y estructura de variables']);
+      if (stage.key === 'uplift') return base.concat(['> calculando metricas tecnicas de los modelos', '> traduciendo resultados a escenarios de negocio']);
+      if (stage.key === 'montecarlo') return base.concat(['> iniciando simulacion de escenarios', '> sincronizando radar y telemetria en directo']);
+      if (stage.key === 'reporte') return base.concat(['> consolidando conclusiones', '> preparando recomendacion ejecutiva']);
+      return base.concat(['> consola lista para iniciar la presentacion']);
+    }
+
+    function showPane(stageKey) {
+      document.querySelectorAll('.stage-pane').forEach((pane) => pane.classList.remove('active'));
+      document.getElementById(`pane-${stageKey}`).classList.add('active');
+      state.activeStage = stageKey;
+      updateStageDecorators();
+    }
+
+    function runProgress(stage, durationMs, onDone) {
+      clearInterval(state.progressTimer);
+      const fill = document.getElementById('progress-fill');
+      const start = performance.now();
+      fill.style.width = '0%';
+      state.progressTimer = setInterval(() => {
+        const elapsed = performance.now() - start;
+        const pct = Math.min(100, elapsed / Math.max(1, durationMs) * 100);
+        fill.style.width = pct + '%';
+        if (pct >= 100) {
+          clearInterval(state.progressTimer);
+          showPane(stage.key);
+          if (onDone) onDone();
+        }
+      }, 32);
+    }
+
+    function refreshLiveFrame(withTimestamp = true) {
+      const frame = document.getElementById('live-frame');
+      const base = asObject(PAYLOAD.simulation).live_dashboard || 'live.html';
+      frame.src = withTimestamp ? `${base}?ts=${Date.now()}` : base;
+    }
+
+    function setMontecarloPlaceholder(visible, title = '', copy = '') {
+      const root = document.getElementById('montecarlo-placeholder');
+      if (!root) return;
+      root.classList.toggle('is-visible', Boolean(visible));
+      if (title) document.getElementById('montecarlo-placeholder-title').textContent = title;
+      if (copy) document.getElementById('montecarlo-placeholder-copy').textContent = copy;
+    }
+
+    function syncLiveFrameHeight() {
+      const frame = document.getElementById('live-frame');
+      if (!frame) return;
+      try {
+        const doc = frame.contentDocument || frame.contentWindow?.document;
+        if (!doc) return;
+        const shell = doc.querySelector('.shell');
+        const measuredHeight = shell
+          ? shell.scrollHeight + 32
+          : Math.max(doc.documentElement.scrollHeight || 0, doc.body ? doc.body.scrollHeight : 0);
+        const nextHeight = Math.min(1800, Math.max(1040, measuredHeight));
+        frame.style.height = `${nextHeight}px`;
+      } catch (error) {
+        // same-origin in local mode, but keep this resilient if the source changes.
+      }
+    }
+
+    function renderAll() {
+      renderHero();
+      renderBriefing();
+      renderDataset();
+      renderUplift();
+      renderSimulation();
+      renderReport();
+      updateStageDecorators();
+    }
+
+    function activateStage(stageKey, instant = false) {
+      const stage = asArray(PAYLOAD.stages).find((item) => item.key === stageKey);
+      if (!stage) return;
+      setConsoleOutput(stage, consoleLines(stage));
+      if (instant) {
+        document.getElementById('progress-fill').style.width = '100%';
+        showPane(stage.key);
+        return;
+      }
+      runProgress(stage, stage.duration_ms);
+    }
+
+    async function hydratePayload() {
+      if (!BACKEND_ENABLED) {
+        setConsoleBadges('Modo local', 'ready', 'Sin backend', '');
+        return;
+      }
+      try {
+        const response = await fetchJson(`${API_BASE}/api/payload`);
+        replacePayload(response.payload);
+        state.backendReady = true;
+        renderAll();
+        setConsoleBadges('Backend online', 'ready', 'Aplicacion sincronizada', 'ready');
+        const live = await fetchJson(`${API_BASE}/api/montecarlo-status`);
+          if (live.preparing) {
+            setMontecarloPlaceholder(true, 'Precalculando simulacion', live.status_message || 'Preparando dataset y modelos antes de arrancar la simulacion real.');
+            beginMontecarloPolling();
+          } else if (live.running || live.is_running) {
+            setMontecarloPlaceholder(false);
+          state.stageStatus.montecarlo = { running: true, done: false };
+          beginMontecarloPolling();
+        }
+      } catch (error) {
+        setConsoleBadges('Modo local', 'alert', 'Backend no accesible', 'alert');
+      }
+    }
+
+    async function runStage(stageKey, options = {}) {
+      const stage = asArray(PAYLOAD.stages).find((item) => item.key === stageKey);
+      if (!stage) return;
+
+      if (!options.keepAutoplay) {
+        state.autoplay = false;
+        clearTimeout(state.autoTimer);
+      }
+
+      if (!BACKEND_ENABLED) {
+        activateStage(stageKey, options.instant === true);
+        return;
+      }
+
+      if (state.backendReady && PRECOMPUTED_STAGE_KEYS.has(stageKey)) {
+        state.stageStatus[stageKey] = { running: false, done: true };
+        updateStageDecorators();
+        showPane(stage.key);
+        setConsoleBadges('Backend online', 'ready', `${stage.title} preparada`, 'ready');
+        setConsoleOutput(stage, consoleLines(stage));
+        document.getElementById('progress-fill').style.width = '100%';
+        return;
+      }
+
+      const autoplayButton = document.getElementById('autoplay-btn');
+      autoplayButton.disabled = true;
+      state.stageStatus[stageKey] = { running: true, done: false };
+      updateStageDecorators();
+      setConsoleOutput(stage, ['> contactando backend local', '> preparando ejecucion real de la etapa']);
+      if (stageKey === 'montecarlo') {
+        showPane(stage.key);
+        document.getElementById('progress-fill').style.width = '0%';
+      }
+
+      try {
+        const response = await fetchJson(`${API_BASE}/api/stage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ stage: stageKey }),
+        });
+        if (response.payload) {
+          replacePayload(response.payload);
+          renderAll();
+        }
+        setConsoleOutput(stage, response.logs || consoleLines(stage));
+        const liveLabel = stageKey === 'montecarlo'
+          ? 'Simulacion en directo'
+          : `${stage.title} completada`;
+        if (stageKey === 'montecarlo' && response.status === 'preparing') {
+          setConsoleBadges('Backend online', 'ready', 'Precalculando simulacion', 'running');
+          setMontecarloPlaceholder(true, 'Precalculando simulacion', 'El backend está preparando dataset y modelos. El dashboard live aparecerá cuando arranque la simulación real.');
+          beginMontecarloPolling();
+          return;
+        }
+        setConsoleBadges('Backend online', 'ready', liveLabel, stageKey === 'montecarlo' ? 'running' : 'ready');
+        if (stageKey === 'montecarlo') {
+          state.stageStatus[stageKey] = {
+            running: Boolean(response.montecarlo && response.montecarlo.running),
+            done: false,
+          };
+          updateStageDecorators();
+          setMontecarloPlaceholder(false);
+          refreshLiveFrame(true);
+          beginMontecarloPolling();
+          return;
+        }
+        const delayMs = options.instant ? 1 : Number(response.delay_ms || stage.duration_ms || 900);
+        runProgress(stage, delayMs, () => {
+          state.stageStatus[stageKey] = {
+            running: stageKey === 'montecarlo' && response.montecarlo && response.montecarlo.running,
+            done: stageKey !== 'montecarlo',
+          };
+          updateStageDecorators();
+          if (stageKey === 'montecarlo') {
+            refreshLiveFrame(true);
+            beginMontecarloPolling();
+          }
+        });
+      } catch (error) {
+        state.stageStatus[stageKey] = { running: false, done: false };
+        updateStageDecorators();
+        setConsoleBadges('Backend error', 'alert', 'Etapa no ejecutada', 'alert');
+        setConsoleOutput(stage, [`> error al ejecutar la etapa`, `> ${error.message}`]);
+      } finally {
+        autoplayButton.disabled = false;
+      }
+    }
+
+    async function pollMontecarloStatus() {
+      try {
+        const status = await fetchJson(`${API_BASE}/api/montecarlo-status`);
+        const pct = Number(status.progress_pct || 0);
+        document.getElementById('progress-fill').style.width = `${pct}%`;
+        if (status.preparing && !status.running && !status.is_running) {
+          const montecarloStage = asArray(PAYLOAD.stages).find((item) => item.key === 'montecarlo');
+          setConsoleBadges('Backend online', 'ready', 'Precalculando simulacion', 'running');
+          setConsoleOutput(
+            montecarloStage,
+            [
+              '> precalculando dataset y modelos',
+              '> preparando el punto de partida de la simulacion real',
+              `> estado: ${status.status_message || 'esperando activos de simulacion'}`,
+            ],
+          );
+          setMontecarloPlaceholder(true, 'Precalculando simulacion', status.status_message || 'Preparando dataset y modelos antes de arrancar la simulación real.');
+          return;
+        }
+        if (status.running || status.is_running) {
+          const leaderText = status.leader ? status.leader.decision : 'calculando ranking';
+          const montecarloStage = asArray(PAYLOAD.stages).find((item) => item.key === 'montecarlo');
+          setConsoleBadges('Backend online', 'ready', `Monte Carlo ${pct.toFixed(1)}%`, 'running');
+          setMontecarloPlaceholder(false);
+          setConsoleOutput(
+            montecarloStage,
+            [
+              '> simulacion Monte Carlo en curso',
+              `> iteracion ${Number(status.current_simulation || 0).toLocaleString('es-ES')} de ${Number(status.total_simulations || 0).toLocaleString('es-ES')}`,
+              `> avance visible: ${pct.toFixed(1)}%`,
+              `> mejor alternativa provisional: ${leaderText}`,
+            ],
+          );
+          if (state.activeStage === 'montecarlo') syncLiveFrameHeight();
+          return;
+        }
+
+        clearInterval(state.montecarloPollHandle);
+        state.montecarloPollHandle = null;
+        state.stageStatus.montecarlo = { running: false, done: true };
+        if (status.payload) {
+          replacePayload(status.payload);
+          renderAll();
+        }
+        document.getElementById('progress-fill').style.width = '100%';
+        const montecarloStage = asArray(PAYLOAD.stages).find((item) => item.key === 'montecarlo');
+        setConsoleBadges('Backend online', 'ready', 'Monte Carlo completada', 'ready');
+        setMontecarloPlaceholder(false);
+        setConsoleOutput(
+          montecarloStage,
+          [
+            '> simulacion finalizada',
+            `> iteraciones finales: ${Number(status.total_simulations || 0).toLocaleString('es-ES')}`,
+            `> mejor alternativa: ${status.leader ? status.leader.decision : 'sin ranking'}`,
+            '> resultados consolidados listos para la recomendacion final',
+          ],
+        );
+        updateStageDecorators();
+        syncLiveFrameHeight();
+      } catch (error) {
+        clearInterval(state.montecarloPollHandle);
+        state.montecarloPollHandle = null;
+        setConsoleBadges('Backend online', 'ready', 'Error monitorizando live', 'alert');
+      }
+    }
+
+    function beginMontecarloPolling() {
+      clearInterval(state.montecarloPollHandle);
+      state.montecarloPollHandle = setInterval(pollMontecarloStatus, 1200);
+      pollMontecarloStatus();
+    }
+
+    function autoplaySequence() {
+      clearTimeout(state.autoTimer);
+      const order = asArray(PAYLOAD.stages).map((stage) => stage.key);
+      let index = 0;
+      state.autoplay = true;
+      async function next() {
+        await runStage(order[index], { keepAutoplay: true });
+        index += 1;
+        if (index < order.length && state.autoplay) {
+          const previous = order[index - 1];
+          const paceMs = Number(asObject(PAYLOAD.simulation).pace_seconds || 0) * 1000;
+          const waitMs = previous === 'montecarlo' ? paceMs + 6000 : 4800;
+          state.autoTimer = setTimeout(next, waitMs);
+        }
+      }
+      next();
+    }
+
+    function bindActions() {
+      document.getElementById('autoplay-btn').addEventListener('click', autoplaySequence);
+      document.querySelectorAll('[data-audience]').forEach((button) => {
+        button.addEventListener('click', () => {
+          state.audience = button.dataset.audience || 'ceo';
+          renderReport();
+        });
+      });
+      document.getElementById('reset-btn').addEventListener('click', () => {
+        state.autoplay = false;
+        state.audience = 'ceo';
+        clearTimeout(state.autoTimer);
+        clearInterval(state.montecarloPollHandle);
+        state.montecarloPollHandle = null;
+        activateStage('briefing', true);
+        setConsoleBadges(BACKEND_ENABLED ? 'Backend online' : 'Modo local', 'ready', BACKEND_ENABLED ? 'Consola lista' : 'Sin backend', BACKEND_ENABLED ? 'ready' : '');
+      });
+      const liveFrame = document.getElementById('live-frame');
+      if (liveFrame) {
+        liveFrame.addEventListener('load', syncLiveFrameHeight);
+      }
+    }
+
+    async function init() {
+      renderAll();
+      renderStageButtons();
+      bindActions();
+      const requested = window.location.hash.slice(1);
+      const known = asArray(PAYLOAD.stages).some((stage) => stage.key === requested);
+      activateStage(known ? requested : 'briefing', true);
+      await hydratePayload();
+    }
+
+    init();
+  </script>
+</body>
+</html>

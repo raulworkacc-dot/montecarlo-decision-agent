@@ -1,0 +1,73 @@
+# Business assumptions for the decision simulation.
+#
+# Everything the data CANNOT tell us lives here, in one reviewable place: costs,
+# rollout reach, execution risk. Everything the data CAN tell us (conversion, ticket,
+# margin, the effect of each lever, saturation of paid media) is estimated by the
+# models. Changing a number here is a business decision, not a modelling fix: the file
+# is listed in .claude/protected_paths.json so the coding agent cannot tune it to
+# reach a preferred conclusion.
+
+[simulation]
+horizon_months = 6               # planning horizon the decision is evaluated over
+base_window_start = "2025-10-01" # opportunities from this date define "today's" mix
+volume_cv = 0.10                 # coefficient of variation of opportunity volume
+n_bootstrap_models = 20          # model refits used to propagate estimation error
+chunk_size = 250                 # simulations per vectorised batch (and live update)
+
+# --- Lever definitions (how each decision changes the opportunities) -----------------
+
+[levers.webinar]
+invite_rate = 0.62               # share of warm, not-yet-invited leads that get invited
+attendance_rate = 0.34           # share of invited leads that attend
+
+[levers.new_product]
+offer_rate = 0.32                # share of eligible, not-yet-offered leads that get the offer
+extra_cost_per_offer_eur = 5.3   # sales-enablement cost per offer
+
+[levers.ads]
+volume_uplift = 0.70             # doubling spend brings +70% paid opportunities (diminishing returns)
+# The shift in lead score and cost per opportunity when budget moves one level up is
+# NOT set here: it is estimated from the history (see scenarios.estimate_ads_response).
+
+# --- Decisions ---------------------------------------------------------------------------
+# fixed_cost_eur          one-off cost to execute the decision
+# failure_probability     chance the initiative ships nothing (project fails, is cancelled)
+# realization_mean / _sd  share of the model-estimated effect that materialises if it ships
+#                         (lognormal; captures execution quality and model optimism)
+# cost_overrun_sd         lognormal sd of the multiplier applied to fixed_cost_eur
+
+[decisions.funnel]
+label = "Mejorar landing + CTA + lead magnet"
+fixed_cost_eur = 1200
+failure_probability = 0.05
+realization_mean = 0.90
+realization_sd = 0.15
+cost_overrun_sd = 0.10
+rationale = "Each change was already A/B-tested in the history; low execution risk."
+
+[decisions.webinar]
+label = "Webinar de ventas"
+fixed_cost_eur = 2500
+failure_probability = 0.10
+realization_mean = 0.90
+realization_sd = 0.20
+cost_overrun_sd = 0.15
+rationale = "Repeatable format, but attendance depends on content and timing."
+
+[decisions.ads]
+label = "Duplicar inversion en Ads"
+fixed_cost_eur = 9000
+failure_probability = 0.0
+realization_mean = 1.0
+realization_sd = 0.25
+cost_overrun_sd = 0.05
+rationale = "Always 'ships'; the risk is auction prices and audience saturation."
+
+[decisions.new_product]
+label = "Nuevo producto"
+fixed_cost_eur = 12000
+failure_probability = 0.35
+realization_mean = 1.0
+realization_sd = 0.50
+cost_overrun_sd = 0.30
+rationale = "Unproven offer: high chance of a failed launch and wide outcome dispersion."
