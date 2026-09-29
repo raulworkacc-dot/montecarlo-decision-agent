@@ -1,0 +1,27 @@
+[
+  {
+    "name": "data_integrity",
+    "passed": true,
+    "detail": "20,000 rows, 2024-01-01 to 2026-04-30"
+  },
+  {
+    "name": "conversion_model_discrimination",
+    "passed": true,
+    "detail": "out-of-time AUC 0.713 (threshold 0.68)"
+  },
+  {
+    "name": "conversion_model_calibration",
+    "passed": true,
+    "detail": "expected calibration error 0.0132 (threshold 0.03)"
+  },
+  {
+    "name": "counterfactual_recovery",
+    "passed": true,
+    "detail": "funnel: est 32.1 [23.6, 40.5] vs true 33.3; webinar: est 57.5 [36.0, 73.1] vs true 57.7; new_product: est 103.4 [70.0, 114.9] vs true 88.7"
+  },
+  {
+    "name": "ranking_resolved",
+    "passed": true,
+    "detail": "funnel vs new_product: paired gap 37,457 EUR, z = 53.4 (threshold 3.0)"
+  }
+]

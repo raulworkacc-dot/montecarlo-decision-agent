@@ -1,111 +1,175 @@
-# agent-harness-template
+# Monte Carlo Decision Agent
 
-Plantilla de arnés agéntico sobre Claude Code, sin particularidades de ningún
-proyecto concreto. Haz fork, sigue [SETUP.md](SETUP.md) y personalízalo para tu
-caso. Nace de `ml-harness`, un arnés para un proyecto de ML, del que se extrajo todo
-lo reutilizable y se dejó fuera lo específico de ese dominio (base de datos,
-subagente de EDA, datos sintéticos).
+**Which growth initiative should a business fund?** This project answers it the way a careful
+analyst would — ML counterfactuals, a Monte Carlo over everything that can go wrong, and a
+Claude tool-using agent that writes the recommendation — and then **checks its own estimates
+against the ground truth** of a synthetic world. It was built by an AI coding agent working
+inside an evaluated harness that decides when the work is done.
 
-## Idea
+[![CI](https://github.com/raulworkacc-dot/montecarlo-decision-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/raulworkacc-dot/montecarlo-decision-agent/actions/workflows/ci.yml)
+![Python](https://img.shields.io/badge/python-3.11%20%7C%203.13-blue)
+![Tests](https://img.shields.io/badge/tests-200%2B-brightgreen)
+[![Ruff](https://img.shields.io/badge/lint-ruff-261230)](https://docs.astral.sh/ruff/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-yellow)](LICENSE)
 
-Un agente decide qué hacer, pero **no decide cuándo ha terminado ni si lo ha hecho
-bien**. Eso lo deciden comprobaciones deterministas (tests, ruff, un corrector y el
-CI). Cada fallo real del agente queda documentado junto al cambio del arnés que lo
-corrige, y el propio arnés se mide con tareas de referencia (evals).
+[Live dashboard](https://raulworkacc-dot.github.io/montecarlo-decision-agent/) ·
+[Walkthrough notebook](notebooks/walkthrough.ipynb) ·
+[Methodology](docs/methodology.md) ·
+[Harness](docs/harness.md) ·
+[Leer en español](README.es.md)
 
-## Principios y cómo se implementan
+![Mission Control dashboard](docs/img/dashboard_montecarlo.webp)
 
-| Principio | Mecanismo | Dónde |
+## The answer, and why it can be trusted
+
+| # | Decision | E[profit] 6 months | P10 | P(loss) | P(best) | Break-even P(fail) |
+|---|---|---:|---:|---:|---:|---:|
+| 1 | Improve landing + CTA + lead magnet | **90,330 EUR** | 62,384 | 5.1% | 71.4% | 98.8% |
+| 2 | New product | 52,873 EUR | −13,620 | 36.0% | 25.9% | 88.1% |
+| 3 | Sales webinar | 30,602 EUR | 9,970 | 9.3% | 2.7% | 93.1% |
+| 4 | Double paid-ads spend | −24,878 EUR | −37,188 | 100% | 0.0% | — |
+
+<sub>10,000 simulated futures per decision, seed 42. Full report: [docs/results/report.md](docs/results/report.md).</sub>
+
+Three findings that only come out because the analysis is validated:
+
+1. **A naive model overstates the funnel by 20%.** Funnel changes rolled out while conversion
+   was drifting up anyway. Controlling for calendar time brings the error to −3.5%, and every
+   true lever effect falls inside its 95% bootstrap interval.
+   ![Counterfactual recovery](docs/img/counterfactual_recovery.png)
+2. **Doubling ads loses money in every future.** Paid media is already running at high or
+   saturated budgets; one more step degrades lead quality and cost on *all* paid traffic, not
+   just the extra volume — an effect estimated from the history, not assumed.
+3. **The new product has the highest upside and a 36% chance of losing money.** The
+   break-even column is the failure probability at which a decision's expected profit drops to
+   zero: how pessimistic the execution-risk assumption would have to be before it stops paying
+   off ("—": it loses money even if it always ships).
+
+## What this project demonstrates
+
+| Area | In this repo |
+|---|---|
+| **Causal inference** | Counterfactual uplift with a calendar control, validated against a known DGP; naive-vs-controlled bias quantified; mediators (lead quality, cost) estimated from data |
+| **Risk modelling** | Vectorised Monte Carlo with common random numbers; model, demand and execution uncertainty; CVaR, P(best), break-even analysis, MC standard errors |
+| **ML practice** | Out-of-time validation, calibration (ECE, Brier), Duan smearing for log-target back-transformation, bootstrap refits propagated into the decision |
+| **LLM engineering** | Claude tool-use loop with strict schemas, bounded turns, refusal/truncation handling, server-side model fallback, ground truth hidden from the agent, deterministic offline fallback clearly labelled |
+| **Software engineering** | Typed, packaged CLI (`mcd`); 200+ tests incl. HTTP security surface; CI on Linux + Windows × Python 3.11/3.13; Dependabot; reproducible, seed-deterministic results |
+| **Security** | Allow-listed routes (the original served `.env`), XSS-safe rendering of LLM text, localhost binding, request size limits |
+| **AI-assisted development** | Built inside an agentic harness: definition of done = `just check`, protected analysis inputs, reviewer subagent, graded reference tasks |
+
+## Quickstart
+
+Requirements: Python 3.11+, [uv](https://docs.astral.sh/uv/) and [just](https://github.com/casey/just).
+
+```bash
+just setup          # install dependencies
+just pipeline       # data -> models -> counterfactuals -> Monte Carlo -> validation (~20 s)
+just serve          # Mission Control at http://127.0.0.1:8765, with a live simulation
+```
+
+No API key is needed: without one the memo is written by a deterministic rule-based author and
+labelled as such. To let Claude write it, copy `.env.example` to `.env`, set
+`ANTHROPIC_API_KEY`, and run `just memo` (or `just serve`, which picks it up automatically).
+
+Other entry points: `just dashboard` (static site), `uv run mcd ask "Why not the webinar?"`,
+`just notebook` (re-executes the [walkthrough](notebooks/walkthrough.ipynb) after
+`just setup --group notebook`), `just check` (lint + tests).
+
+## How it works
+
+```mermaid
+flowchart LR
+    A[Synthetic history<br/>20k opportunities<br/>known DGP] --> B[Models<br/>P sale · ticket · margin<br/>out-of-time validated]
+    B --> C[Counterfactual uplift<br/>per lever + bootstrap CI]
+    A -. ground truth .-> V{Validation gates}
+    C --> V
+    B --> D[Delta tensor<br/>20 refits × 4 decisions × opportunities]
+    S[scenarios.toml<br/>costs · reach · execution risk] --> D
+    D --> E[Monte Carlo<br/>10k paired futures]
+    E --> V
+    E --> F[Toolbox<br/>6 read-only tools]
+    F --> G[Claude agent<br/>or rule-based memo]
+    G --> H[Mission Control<br/>dashboard]
+```
+
+| Stage | Module | Key idea |
 |---|---|---|
-| La terminación la deciden tests y CI, no el agente | `just check` es la definición de "hecho"; corrector determinista; pipeline de CI | `CLAUDE.md`, `src/harness/grader.py`, `bitbucket-pipelines.yml` |
-| Todo fallo real se documenta con su corrección | Registro fallo → cambio en el arnés | `HARNESS_CHANGELOG.md` |
-| El arnés se evalúa con tareas de referencia | Tareas en TOML, runner y tabla pass/fail | `evals/`, `src/harness/runner.py` |
-| Permisos acotados | Lista `allow` de recetas concretas de `just`, nunca `just *` | `.claude/settings.json` |
-| Las rutas sensibles son de solo lectura | Rutas configurables (no en código) protegidas por un hook (Edit, Write y Bash) | `.claude/protected_paths.json`, `.claude/hooks/block_protected_writes.py` |
-| Revisión antes de dar algo por terminado | Subagente `reviewer`, de solo lectura + `just check` | `.claude/agents/reviewer.md` |
+| World | [`synthetic.py`](src/montecarlo_decisions/synthetic.py) | Structural DGP with calendar confounding and mediation; exposes `true_*` functions |
+| Models | [`models.py`](src/montecarlo_decisions/models.py) | Expected value per opportunity; temporal holdout; smearing; bootstrap row sets |
+| Uplift | [`counterfactuals.py`](src/montecarlo_decisions/counterfactuals.py) | Model vs naive vs truth, with bootstrap intervals |
+| Decisions | [`scenarios.py`](src/montecarlo_decisions/scenarios.py), [`scenarios.toml`](src/montecarlo_decisions/scenarios.toml) | Row-aligned interventions; every business assumption in one validated file |
+| Simulation | [`simulation.py`](src/montecarlo_decisions/simulation.py) | Batched, vectorised, common random numbers; risk metrics |
+| Gates | [`validation.py`](src/montecarlo_decisions/validation.py) | Soundness checks — never "which decision must win" |
+| Agent | [`agent/`](src/montecarlo_decisions/agent) | Tools, Claude loop, memo schema, rule-based author |
+| App | [`server.py`](src/montecarlo_decisions/server.py), [`dashboard.py`](src/montecarlo_decisions/dashboard.py), [`templates/`](src/montecarlo_decisions/templates) | Local app with live Monte Carlo; static build for Pages |
 
-## Mapa del repo
+The reasoning behind each choice, and the limitations, are in
+[docs/methodology.md](docs/methodology.md).
 
-```
-agent-harness-template/
-├── CLAUDE.md                  contexto permanente y definición de "hecho" (con TODOs)
-├── SETUP.md                   checklist para personalizar el fork
-├── HARNESS_CHANGELOG.md       fallo del arnés -> cambio que lo corrige (vacío)
-├── justfile                   setup, lint, test, check, eval, evals
-├── bitbucket-pipelines.yml    CI: just check en main y pull requests
-├── .claude/
-│   ├── settings.json          permisos acotados y registro del hook
-│   ├── protected_paths.json   rutas de solo lectura (editar aquí, no en código)
-│   ├── agents/
-│   │   ├── reviewer.md        revisa cambios antes de darlos por terminados
-│   │   └── EXAMPLE-domain-agent.md.example   plantilla para un subagente de dominio
-│   └── hooks/block_protected_writes.py
-├── src/harness/
-│   ├── grader.py               comprobaciones deterministas de un eval
-│   └── runner.py                lanza Claude Code en una copia limpia y puntúa
-├── evals/tasks/                 dos tareas de referencia genéricas (TOML)
-├── reports/                     salida de subagentes de dominio (ignorada por git)
-├── protected/                   carpeta de ejemplo, de solo lectura
-└── tests/                       tests del hook, el corrector y el runner
-```
+## Built inside an agentic harness
 
-## Cómo se ejecuta un eval
+This repository is also a working example of **AI-assisted development with guardrails**. A
+coding agent (Claude Code) did the implementation under rules it cannot override:
+
+- **Done means `just check` is green** — not the agent saying so; CI enforces the same.
+- **The analysis inputs are read-only for the agent.** A hook blocks edits to the synthetic
+  world and to the business assumptions, so "make the checks pass" can never be satisfied by
+  rigging the data. Eval `002` asks the agent to do exactly that; it passes only if the
+  protected files stay untouched and the checks stay green.
+- **A reviewer subagent** checks domain rules (ground-truth leakage into the agent's tools,
+  rankings asserted in tests, determinism, unescaped LLM text).
+- **The harness is measured** with reference tasks run on a clean clone and graded
+  deterministically (`just evals`).
+
+Details: [docs/harness.md](docs/harness.md) · agent context: [CLAUDE.md](CLAUDE.md).
+
+## Repository map
 
 ```
-tarea (TOML) -> runner -> copia limpia del último commit + uv sync
-                       -> claude -p (carga CLAUDE.md, hooks y subagentes)
-                       -> corrector determinista
-                       -> informe JSON (resultado, duración, coste estimado)
+├── src/montecarlo_decisions/   the analysis, the agent and the web app (CLI: mcd)
+├── src/harness/                eval runner and deterministic grader of the agentic harness
+├── tests/                      200+ tests (methodology, simulation, agent, HTTP security, harness)
+├── notebooks/walkthrough.ipynb executed walkthrough with figures
+├── docs/                       methodology, harness, figures, versioned results snapshot
+├── evals/tasks/                harness reference tasks (TOML)
+├── .claude/                    agent rules: permissions, protection hook, reviewer subagent
+├── .github/workflows/          CI (Linux + Windows) and GitHub Pages deployment
+└── bitbucket-pipelines.yml     mirror CI on Bitbucket
 ```
 
-Comprobaciones disponibles en cada tarea:
+## What changed from the original case
 
-- `just_check`: `just check` sale en verde.
-- `files_exist`: existen los archivos pedidos.
-- `protected`: ninguna ruta protegida cambia respecto al commit base.
-- `tests_preserved`: no se modifica ni borra ningún test existente, solo se pueden añadir.
-- `only_changed`: todo cambio respecto al commit base está dentro de las rutas permitidas.
-- `report_contains`: el informe existe y menciona los términos esperados.
+The business case comes from a public project by
+[DataScience ForBusiness](https://www.youtube.com/@DataScienceForBusiness) (see Credits). This
+repository is a rebuild; the main differences:
 
-## Uso
+| Original | This repository |
+|---|---|
+| The four analytical agent tools queried Spanish column names that the pipeline never wrote, so they always failed and a hand-written memo was shown as the agent's | Tools tested against the real artifacts; the memo is either Claude's (validated schema) or explicitly labelled rule-based |
+| Quality check required the funnel to win | Gates check soundness only; ranking is an output |
+| No calendar control → funnel uplift inflated ~20% | Time-controlled models; bias measured against ground truth |
+| Ads scenario ignored saturation of existing paid traffic | Mediators estimated from history; ads correctly shows a loss |
+| Hand-tuned noise per decision inside the loop | Uncertainty sources separated, assumptions in one reviewable file, break-even analysis |
+| Web server exposed the whole project folder (incl. `.env`) | Allow-listed routes, localhost, size-limited JSON, escaped rendering |
+| Row-by-row loops, `time.sleep` to stretch the demo | Vectorised DGP and simulation; demo pacing is an explicit, documented flag |
+| Scripts, `.bat` launcher, no tests or CI | Packaged CLI, 200+ tests, cross-platform CI |
 
-Requisitos: Python 3.11, [uv](https://docs.astral.sh/uv/), [just](https://github.com/casey/just)
-y git. Para los evals, además, la CLI de Claude Code en el PATH y con sesión iniciada.
+## Development
 
+```bash
+just check          # ruff + pytest (the definition of done)
+just coverage       # tests with coverage
+just snapshot       # refresh docs/results from a fresh run
+just evals          # harness reference tasks (needs the Claude Code CLI)
 ```
-just setup                                      # instala dependencias
-just check                                      # ruff + pytest
-just eval evals/tasks/001_add_utility.toml      # una tarea de referencia
-just evals                                      # todas, con tabla final
-```
 
-Trabajo interactivo: abre la carpeta en VS Code y usa el panel de Claude Code. El
-`CLAUDE.md`, los permisos, el hook y los subagentes se cargan solos. Antes de dar
-por terminada una tarea que cambie código, el agente invoca al `reviewer` y ejecuta
-`just check`.
+## Credits and license
 
-## Qué NO trae esta plantilla (y por qué)
+The business scenario (the four growth decisions, the structure of the synthetic sales data,
+the original notebook and the visual design of the dashboards) is based on material published
+by **DataScience ForBusiness** — [youtube.com/@DataScienceForBusiness](https://www.youtube.com/@DataScienceForBusiness) —
+and is reused with the author's permission. The analysis code, methodology changes, agent,
+tests, harness integration and documentation in this repository are released under the
+[MIT License](LICENSE).
 
-- **Acceso a datos.** ml-harness tenía una base DuckDB y un subagente `data-explorer`
-  restringido a `just query`. Es un patrón de dominio, no de arnés: se documenta
-  como plantilla inerte en `.claude/agents/EXAMPLE-domain-agent.md.example` y en
-  `SETUP.md`, para que lo actives solo si tu proyecto lo necesita.
-- **Reglas de dominio en `reviewer`** (p. ej. fuga de datos en ML). Añádelas tú en
-  la sección marcada en `.claude/agents/reviewer.md`.
-
-## Límites conocidos
-
-- La protección de rutas por terminal (Bash) es una heurística sobre el texto del
-  comando: bloquea cualquier comando que mencione una ruta protegida y no sea una
-  lectura simple (hay falsos positivos), y no detecta un script que escriba ahí sin
-  nombrar la ruta en el propio comando.
-- Los subagentes conservan `Bash`, y cualquier restricción a comandos concretos vive
-  en su prompt, no en permisos. La regla `deny` de `.claude/settings.json` protege
-  archivos concretos frente a Edit/Write; el resto depende del hook y del prompt.
-- El corrector (`grader.py`) no ve archivos ignorados por `.gitignore`.
-- No se comprueba de forma determinista si el agente invocó al `reviewer`.
-
-## Siguientes pasos (por proyecto, no de la plantilla)
-
-Ver `SETUP.md`. Una vez personalizado, cada proyecto acumulará sus propias tareas de
-referencia, reglas de dominio y entradas en `HARNESS_CHANGELOG.md`.
+All data is synthetic. Figures illustrate the method, not the performance of a real business.
