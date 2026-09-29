@@ -5,20 +5,35 @@ definitions:
     uv: ~/.cache/uv
   steps:
     - step: &check
-        name: Lint y tests (just check)
-        max-time: 10
+        name: Lint and tests (just check)
+        max-time: 20
         caches:
           - uv
         script:
           - export UV_LINK_MODE=copy
           - pip install --quiet uv rust-just
-          - just setup
+          - just setup --locked
           - just check
+    - step: &pipeline
+        name: Pipeline smoke run
+        max-time: 20
+        caches:
+          - uv
+        script:
+          - export UV_LINK_MODE=copy
+          - pip install --quiet uv
+          - uv sync --locked
+          - uv run mcd pipeline
+          - uv run mcd dashboard --output site
+        artifacts:
+          - artifacts/report.md
+          - site/**
 
 pipelines:
   branches:
     main:
       - step: *check
+      - step: *pipeline
   pull-requests:
     '**':
       - step: *check
