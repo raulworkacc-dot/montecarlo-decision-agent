@@ -1,13 +1,13 @@
-"""Runner de evals: ejecuta Claude Code sobre una copia limpia y puntua con el corrector.
+"""Eval runner: runs Claude Code on a clean copy of the repo and scores it with the grader.
 
-Flujo: clona el repo (ultimo commit) en un directorio temporal, instala dependencias,
-lanza `claude -p` con la tarea y puntua el resultado con harness.grader.
+Flow: clone the repo (last commit) into a temporary directory, install dependencies,
+launch `claude -p` with the task and score the result with harness.grader.
 
-Los permisos de Bash se leen de .claude/settings.json y se pasan con --allowedTools,
-porque Claude Code ignora `permissions.allow` en carpetas que no son de confianza.
-No se usa --bare: omitiria CLAUDE.md, hooks y subagentes, es decir, el arnes.
+Bash permissions are read from .claude/settings.json and passed with --allowedTools,
+because Claude Code ignores `permissions.allow` in untrusted folders. --bare is not
+used: it would skip CLAUDE.md, hooks and subagents, i.e. the harness itself.
 
-Uso: uv run python -m harness.runner evals/tasks/001_add_utility.toml [--keep] [--timeout 600]
+Usage: uv run python -m harness.runner evals/tasks/001_add_utility.toml [--keep] [--timeout 600]
 """
 
 import argparse
@@ -28,14 +28,14 @@ from harness.grader import all_passed, grade, load_task
 DEFAULT_TIMEOUT = 600
 
 NON_INTERACTIVE_NOTE = (
-    "\n\nEste eval es no interactivo: nadie puede responder preguntas. "
-    "Si algo es ambiguo, elige la opcion mas conservadora, documentala en el codigo "
-    "y termina la tarea."
+    "\n\nThis eval is non-interactive: nobody can answer questions. "
+    "If something is ambiguous, choose the most conservative option, document it in "
+    "the code and finish the task."
 )
 
 
 class RunnerError(Exception):
-    """Error de preparacion del eval (no es un fallo del agente)."""
+    """Eval setup error (not an agent failure)."""
 
 
 @dataclass
@@ -60,25 +60,24 @@ def run_checked(command: list[str], cwd: Path) -> str:
             errors="replace",
         )
     except FileNotFoundError as error:
-        raise RunnerError(f"no se encuentra el comando: {command[0]}") from error
+        raise RunnerError(f"command not found: {command[0]}") from error
     if result.returncode != 0:
-        raise RunnerError(f"`{' '.join(command)}` fallo: {result.stderr.strip()}")
+        raise RunnerError(f"`{' '.join(command)}` failed: {result.stderr.strip()}")
     return result.stdout
 
 
 def ensure_clean(repo: Path) -> None:
-    """La copia sale del ultimo commit: exige que no haya nada sin commitear."""
+    """The copy comes from the last commit: require a clean working tree."""
     if run_checked(["git", "status", "--porcelain"], repo).strip():
-        raise RunnerError("hay cambios sin commitear: haz commit antes de lanzar evals")
+        raise RunnerError("uncommitted changes: commit before running evals")
 
 
 def prepare_workdir(repo: Path, dest: Path, seed: bool = False) -> str:
-    """Clona el repo en `dest`, instala dependencias y devuelve el sha base.
+    """Clone the repo into `dest`, install dependencies and return the base sha.
 
-    Si `seed` es True ejecuta `just seed` (si tu proyecto tiene un paso de
-    preparacion de datos/fixtures que debe correr una persona, no el agente,
-    anadelo como esa receta). Sin receta `seed` en el justfile, una tarea que la
-    pida fallara: no la uses hasta tener esa receta.
+    If `seed` is True it runs `just seed` (a data/fixture preparation step that a
+    person, not the agent, should run). Without a `seed` recipe in the justfile a task
+    that asks for it fails.
     """
     run_checked(["git", "clone", "--quiet", str(repo), str(dest)], repo)
     run_checked(["uv", "sync", "--quiet"], dest)
@@ -114,7 +113,7 @@ def build_command(prompt: str, allowed_tools: list[str], claude_bin: str = "clau
 
 
 def parse_output(stdout: str) -> tuple[str, float | None, str | None]:
-    """Extrae (resultado, coste estimado, id de sesion) del JSON de `claude -p`."""
+    """Extract (result, estimated cost, session id) from the JSON of `claude -p`."""
     try:
         data = json.loads(stdout)
     except json.JSONDecodeError:
@@ -153,14 +152,14 @@ def run_agent(command: list[str], cwd: Path, timeout: int) -> AgentRun:
 
 
 def _force_remove(func, path, _exc_info) -> None:
-    """En Windows los objetos de .git son de solo lectura: se fuerza el borrado."""
-    os.chmod(path, stat.S_IWRITE)
+    """On Windows .git objects are read-only: force the removal."""
+    Path(path).chmod(stat.S_IWRITE)
     func(path)
 
 
 def cleanup(workdir: Path, keep: bool) -> None:
     if keep:
-        print(f"Copia conservada en: {workdir}")
+        print(f"Working copy kept at: {workdir}")
     else:
         shutil.rmtree(workdir, onerror=_force_remove)
 
@@ -171,7 +170,7 @@ def run_task(task_path: Path, repo: Path, timeout: int, keep: bool = False) -> d
     allowed = load_allowed_tools(repo / ".claude" / "settings.json")
     claude_bin = shutil.which("claude")
     if claude_bin is None:
-        raise RunnerError("no se encuentra `claude` en el PATH")
+        raise RunnerError("`claude` is not on the PATH")
     workdir = Path(tempfile.mkdtemp(prefix="harness-eval-"))
     try:
         dest = workdir / "repo"
@@ -209,15 +208,15 @@ def print_report(report: dict, path: Path) -> None:
     status = "PASS" if report["passed"] else "FAIL"
     print(
         f"[{status}] {report['task_id']} ({report['duration_s']:.0f}s, "
-        f"coste estimado {report['cost_usd']} USD)"
+        f"estimated cost {report['cost_usd']} USD)"
     )
     for check in report["checks"]:
         mark = "ok  " if check["passed"] else "FAIL"
         detail = f" - {check['detail']}" if check["detail"] else ""
         print(f"  {mark} {check['name']}{detail}")
     if report["timed_out"]:
-        print("  El agente supero el tiempo limite.")
-    print(f"Informe: {path}")
+        print("  The agent exceeded the time limit.")
+    print(f"Report: {path}")
 
 
 def discover_tasks(tasks_dir: Path) -> list[Path]:
@@ -225,7 +224,7 @@ def discover_tasks(tasks_dir: Path) -> list[Path]:
 
 
 def format_summary(reports: list[dict]) -> str:
-    rows = [("Tarea", "Resultado", "Tiempo", "Coste USD")]
+    rows = [("Task", "Result", "Time", "Cost USD")]
     for report in reports:
         cost = report["cost_usd"]
         rows.append(
@@ -233,29 +232,27 @@ def format_summary(reports: list[dict]) -> str:
                 report["task_id"],
                 "PASS" if report["passed"] else "FAIL",
                 f"{report['duration_s']:.0f}s",
-                "n/d" if cost is None else f"{cost:.3f}",
+                "n/a" if cost is None else f"{cost:.3f}",
             )
         )
     widths = [max(len(row[i]) for row in rows) for i in range(4)]
     lines = ["  ".join(cell.ljust(widths[i]) for i, cell in enumerate(row)) for row in rows]
     passed = sum(1 for report in reports if report["passed"])
-    lines.append(f"{passed}/{len(reports)} tareas pasan")
+    lines.append(f"{passed}/{len(reports)} tasks pass")
     return "\n".join(lines)
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Ejecuta tareas de referencia (evals).")
-    parser.add_argument("task", type=Path, nargs="?", help="ruta al archivo .toml de la tarea")
-    parser.add_argument(
-        "--all", action="store_true", help="ejecuta todas las tareas de evals/tasks"
-    )
-    parser.add_argument("--timeout", type=int, default=DEFAULT_TIMEOUT, help="segundos por tarea")
-    parser.add_argument("--keep", action="store_true", help="conserva la copia de trabajo")
+    parser = argparse.ArgumentParser(description="Run the harness reference tasks (evals).")
+    parser.add_argument("task", type=Path, nargs="?", help="path to the task .toml file")
+    parser.add_argument("--all", action="store_true", help="run every task in evals/tasks")
+    parser.add_argument("--timeout", type=int, default=DEFAULT_TIMEOUT, help="seconds per task")
+    parser.add_argument("--keep", action="store_true", help="keep the working copy")
     args = parser.parse_args(argv)
     if args.all == (args.task is not None):
-        parser.error("indica una tarea o usa --all, pero no ambos")
+        parser.error("pass a task or --all, not both")
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-    os.environ.pop("VIRTUAL_ENV", None)  # evita el aviso de uv por el .venv del repo origen
+    os.environ.pop("VIRTUAL_ENV", None)  # avoid uv's warning about the source repo's .venv
     repo = Path(__file__).resolve().parents[2]
     tasks = discover_tasks(repo / "evals" / "tasks") if args.all else [args.task.resolve()]
     reports = []

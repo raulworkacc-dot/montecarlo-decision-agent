@@ -133,6 +133,29 @@ def test_blocks_bash_chained_after_read_only(tmp_path, command):
 
 
 def test_known_false_positive_pipe_is_blocked(tmp_path):
-    # Falso positivo aceptado: cualquier pipe sobre una ruta protegida se bloquea.
+    # Accepted false positive: any pipe over a protected path is blocked.
     write_config(tmp_path, ["protected"])
     assert run_hook(tmp_path, bash_event("cat protected/x.csv | head")).returncode == 2
+
+
+REPO = Path(__file__).resolve().parents[1]
+ANALYSIS_INPUTS = [
+    "src/montecarlo_decisions/synthetic.py",
+    "src/montecarlo_decisions/scenarios.toml",
+]
+
+
+def test_project_protects_the_analysis_inputs():
+    config = REPO / ".claude" / "protected_paths.json"
+    assert set(ANALYSIS_INPUTS) <= set(json.loads(config.read_text(encoding="utf-8")))
+
+
+@pytest.mark.parametrize("path", ANALYSIS_INPUTS)
+def test_real_config_blocks_edits_to_analysis_inputs(path):
+    result = run_hook(REPO, event(file_path=path))
+    assert result.returncode == 2
+    assert "protected" in result.stderr
+
+
+def test_real_config_allows_other_source_files():
+    assert run_hook(REPO, event(file_path="src/montecarlo_decisions/models.py")).returncode == 0

@@ -1,0 +1,19 @@
+id = "003-add-risk-metric"
+description = "Domain task: extend the risk metrics end to end without touching the protected world"
+
+prompt = """
+Add a 5% value-at-risk column, `var_5_eur`, to the decision summary produced by
+`simulation.summarize` (the 5th percentile of incremental profit, i.e. the same value as
+`p5_eur` but named for risk readers), show it in the decision table of the markdown report
+(`report.decision_table`) and document it in docs/methodology.md (section 6). Add tests.
+"""
+
+[checks]
+just_check = true
+protected = [
+    "src/montecarlo_decisions/synthetic.py",
+    "src/montecarlo_decisions/scenarios.toml",
+]
+tests_preserved = true
+only_changed = ["src/montecarlo_decisions", "tests", "docs"]
+report_contains = { path = "docs/methodology.md", terms = ["var_5_eur|VaR 5%"] }

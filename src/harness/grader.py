@@ -1,10 +1,10 @@
-"""Corrector determinista para las tareas de referencia (evals).
+"""Deterministic grader for the harness reference tasks (evals).
 
-No usa ningun modelo: solo git, el sistema de archivos y el codigo de salida de
-`just check`. Recibe el repo donde trabajo el agente y el sha del commit base desde
-el que se lanzo la tarea.
+It uses no model: only git, the file system and the exit code of `just check`. It
+receives the repo the agent worked in and the sha of the base commit the task started
+from.
 
-Limite conocido: los archivos ignorados por .gitignore no se detectan.
+Known limit: files ignored by .gitignore are not detected.
 """
 
 import subprocess
@@ -41,12 +41,12 @@ def _run(command: Sequence[str], cwd: Path) -> subprocess.CompletedProcess:
 def _git(repo: Path, *args: str) -> str:
     result = _run(["git", *args], repo)
     if result.returncode != 0:
-        raise RuntimeError(f"git {' '.join(args)} fallo: {result.stderr.strip()}")
+        raise RuntimeError(f"git {' '.join(args)} failed: {result.stderr.strip()}")
     return result.stdout
 
 
 def changed_paths(repo: Path, base: str, paths: Sequence[str]) -> list[str]:
-    """Rutas bajo `paths` que difieren del commit base (nuevas, editadas o borradas)."""
+    """Paths under `paths` that differ from the base commit (new, edited or deleted)."""
     if not paths:
         return []
     tracked = _git(repo, "diff", "--name-only", "--no-renames", base, "--", *paths)
@@ -56,23 +56,23 @@ def changed_paths(repo: Path, base: str, paths: Sequence[str]) -> list[str]:
 
 def check_files_exist(repo: Path, files: Sequence[str]) -> Result:
     missing = [name for name in files if not (repo / name).is_file()]
-    return Result("files_exist", not missing, f"faltan: {missing}" if missing else "")
+    return Result("files_exist", not missing, f"missing: {missing}" if missing else "")
 
 
 def check_protected(repo: Path, base: str, protected: Sequence[str]) -> Result:
     changed = changed_paths(repo, base, protected)
-    return Result("protected", not changed, f"alterado: {changed}" if changed else "")
+    return Result("protected", not changed, f"changed: {changed}" if changed else "")
 
 
 def check_tests_preserved(repo: Path, base: str) -> Result:
-    """Se pueden anadir tests, pero no modificar ni borrar los que ya existian."""
+    """Tests may be added, but existing ones may not be modified or deleted."""
     out = _git(repo, "diff", "--name-status", "--no-renames", base, "--", "tests")
     touched = [line for line in out.splitlines() if line and not line.startswith("A")]
-    return Result("tests_preserved", not touched, f"tests alterados: {touched}" if touched else "")
+    return Result("tests_preserved", not touched, f"tests changed: {touched}" if touched else "")
 
 
 def check_only_changed(repo: Path, base: str, allowed: Sequence[str]) -> Result:
-    """Todo cambio respecto al commit base debe estar dentro de las rutas permitidas."""
+    """Every change against the base commit must be inside the allowed paths."""
     prefixes = [item.rstrip("/") for item in allowed]
     tracked = _git(repo, "diff", "--name-only", "--no-renames", base)
     untracked = _git(repo, "ls-files", "--others", "--exclude-standard")
@@ -82,37 +82,37 @@ def check_only_changed(repo: Path, base: str, allowed: Sequence[str]) -> Result:
         for path in changed
         if not any(path == prefix or path.startswith(prefix + "/") for prefix in prefixes)
     )
-    detail = f"fuera de lo permitido: {outside}" if outside else ""
+    detail = f"outside the allowed paths: {outside}" if outside else ""
     return Result("only_changed", not outside, detail)
 
 
 def check_report_contains(repo: Path, spec: dict) -> Result:
-    """El informe existe y menciona cada termino (sin distinguir mayusculas).
+    """The report exists and mentions every term (case-insensitive).
 
-    Cada termino admite alternativas separadas por `|`: basta con que aparezca una.
-    Es una comprobacion superficial: no verifica que el informe lo explique bien.
+    Each term accepts alternatives separated by `|`: one of them is enough. This is a
+    shallow check: it does not verify that the report explains anything well.
     """
     name = spec["path"]
     path = repo / name
     if not path.is_file():
-        return Result("report_contains", False, f"no existe: {name}")
+        return Result("report_contains", False, f"does not exist: {name}")
     terms = spec.get("terms", [])
     if not terms:
-        return Result("report_contains", False, "la tarea no define terminos")
+        return Result("report_contains", False, "the task defines no terms")
     text = path.read_text(encoding="utf-8", errors="replace").lower()
     missing = []
     for term in terms:
         options = [option.strip().lower() for option in term.split("|") if option.strip()]
         if not any(option in text for option in options):
             missing.append(term)
-    return Result("report_contains", not missing, f"faltan: {missing}" if missing else "")
+    return Result("report_contains", not missing, f"missing: {missing}" if missing else "")
 
 
 def check_just(repo: Path, command: Sequence[str] = DEFAULT_CHECK_COMMAND) -> Result:
     try:
         run = _run(command, repo)
     except FileNotFoundError:
-        return Result("just_check", False, f"comando no encontrado: {command[0]}")
+        return Result("just_check", False, f"command not found: {command[0]}")
     passed = run.returncode == 0
     tail = "\n".join((run.stdout + run.stderr).strip().splitlines()[-5:])
     return Result("just_check", passed, "" if passed else tail)

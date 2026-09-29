@@ -1,13 +1,20 @@
 id = "001-add-utility"
-description = "Tarea simple con test: verifica el flujo basico del arnes"
+description = "Simple task with a test: checks the basic harness loop (implement, test, just check)"
 
 prompt = """
-Anade en src/harness/utils.py una funcion `clip01(x: float) -> float` que limite x al
-rango [0, 1]. Incluye sus tests en tests/test_utils.py.
+Add a function `format_eur(value: float) -> str` in src/montecarlo_decisions/formatting.py
+that formats an amount in euros with a dot as thousands separator and no decimals
+(e.g. 90330.4 -> "90.330 EUR", -1500 -> "-1.500 EUR"). Include its tests in
+tests/test_formatting.py.
 """
 
 [checks]
 just_check = true
-files_exist = ["src/harness/utils.py", "tests/test_utils.py"]
-protected = ["protected", "pyproject.toml", ".claude"]
+files_exist = ["src/montecarlo_decisions/formatting.py", "tests/test_formatting.py"]
+protected = [
+    "src/montecarlo_decisions/synthetic.py",
+    "src/montecarlo_decisions/scenarios.toml",
+    "pyproject.toml",
+    ".claude",
+]
 tests_preserved = true

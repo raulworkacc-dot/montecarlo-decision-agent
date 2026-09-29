@@ -1,17 +1,16 @@
-"""Hook PreToolUse: bloquea escrituras en las rutas protegidas del proyecto.
+"""PreToolUse hook: block writes to the project's protected paths.
 
-Lee las rutas protegidas de `.claude/protected_paths.json` (lista de rutas
-relativas a la raiz del repo). Para proteger o liberar una ruta, edita ese
-archivo: no hace falta tocar este script.
+Protected paths are read from `.claude/protected_paths.json` (a list of paths
+relative to the repo root). To protect or release a path, edit that file: this
+script does not need to change.
 
-Lee el JSON del evento por stdin. Exit 2 bloquea la accion y devuelve el
-mensaje de stderr al agente. Exit 0 la permite.
+The event JSON arrives on stdin. Exit 2 blocks the action and returns the stderr
+message to the agent. Exit 0 allows it.
 
-Cubre dos vias:
-- Herramientas de edicion (Edit, Write, MultiEdit, NotebookEdit): comprueba la
-  ruta del archivo.
-- Bash: heuristica sobre el texto del comando. No es hermetica: un script que
-  escriba en una ruta protegida sin nombrarla en el comando no se detecta.
+It covers two routes:
+- Editing tools (Edit, Write, MultiEdit, NotebookEdit): the file path is checked.
+- Bash: a heuristic on the command text. It is not airtight: a script that writes
+  to a protected path without naming it in the command is not detected.
 """
 
 import json
@@ -42,7 +41,7 @@ def load_protected_paths(project_dir: Path) -> list[str]:
 
 
 def build_pattern(paths: list[str]) -> re.Pattern | None:
-    """Combina las rutas en un patron: cada segmento separado por / o \\."""
+    """Combine the paths into one pattern: segments separated by / or \\."""
     alternatives = []
     for path in paths:
         segments = [re.escape(part) for part in re.split(r"[\\/]+", path.strip("/\\")) if part]
@@ -66,7 +65,7 @@ def is_protected(file_path: str, project_dir: Path, protected_paths: list[str]) 
 
 
 def bash_touches_protected(command: str, pattern: re.Pattern) -> bool:
-    """True si el comando menciona una ruta protegida y no es una lectura simple."""
+    """True if the command mentions a protected path and is not a simple read."""
     if not pattern.search(command):
         return False
     parts = command.strip().split()
@@ -83,7 +82,7 @@ def main() -> int:
         file_path = tool_input.get("file_path") or tool_input.get("notebook_path")
     except (json.JSONDecodeError, AttributeError):
         print(
-            "block_protected_writes: entrada ilegible, se bloquea por seguridad.",
+            "block_protected_writes: unreadable input, blocked for safety.",
             file=sys.stderr,
         )
         return 2
@@ -96,9 +95,9 @@ def main() -> int:
     pattern = build_pattern(protected_paths)
     if isinstance(command, str) and pattern and bash_touches_protected(command, pattern):
         print(
-            "Bloqueado: el comando toca una ruta protegida "
-            f"({', '.join(protected_paths)}). Usa comandos simples de lectura "
-            "(ls, cat) o una receta de just.",
+            "Blocked: the command touches a protected path "
+            f"({', '.join(protected_paths)}). Use simple read commands "
+            "(ls, cat) or a just recipe.",
             file=sys.stderr,
         )
         return 2
@@ -107,9 +106,9 @@ def main() -> int:
         return 0
     if is_protected(file_path, project_dir, protected_paths):
         print(
-            f"Bloqueado: intento de escribir en una ruta protegida ({file_path}). "
-            "Edita .claude/protected_paths.json si esa ruta ya no debería estar "
-            "protegida.",
+            f"Blocked: attempt to write to a protected path ({file_path}). "
+            "A person must edit .claude/protected_paths.json if that path should no "
+            "longer be protected.",
             file=sys.stderr,
         )
         return 2

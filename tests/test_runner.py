@@ -134,8 +134,8 @@ def test_save_report_writes_json_with_task_id(tmp_path):
 def test_build_prompt_appends_non_interactive_note():
     prompt = build_prompt("  haz algo  ")
     assert prompt.startswith("haz algo")
-    assert "no interactivo" in prompt
-    assert "nadie puede responder" in prompt
+    assert "non-interactive" in prompt
+    assert "nobody can answer" in prompt
 
 
 def test_format_summary_lists_tasks_and_counts():
@@ -144,11 +144,13 @@ def test_format_summary_lists_tasks_and_counts():
         {"task_id": "002-b", "passed": False, "duration_s": 64.0, "cost_usd": None},
     ]
     text = format_summary(reports)
-    assert "001-a" in text and "PASS" in text
-    assert "002-b" in text and "FAIL" in text
+    assert "001-a" in text
+    assert "PASS" in text
+    assert "002-b" in text
+    assert "FAIL" in text
     assert "0.124" in text
-    assert "n/d" in text
-    assert text.splitlines()[-1] == "1/2 tareas pasan"
+    assert "n/a" in text
+    assert text.splitlines()[-1] == "1/2 tasks pass"
 
 
 def test_discover_tasks_returns_sorted_toml_files(tmp_path):

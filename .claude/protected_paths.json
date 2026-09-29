@@ -1,3 +1,4 @@
 [
-  "protected"
+  "src/montecarlo_decisions/synthetic.py",
+  "src/montecarlo_decisions/scenarios.toml"
 ]

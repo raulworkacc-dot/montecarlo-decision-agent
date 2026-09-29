@@ -4,6 +4,8 @@
       "Bash(just check)",
       "Bash(just lint)",
       "Bash(just test)",
+      "Bash(just pipeline)",
+      "Bash(just dashboard)",
       "Bash(git status)",
       "Bash(git diff *)",
       "Bash(git log *)"

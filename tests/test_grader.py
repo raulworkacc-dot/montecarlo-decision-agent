@@ -140,7 +140,7 @@ def test_just_check_fails_on_nonzero_exit(repo):
 def test_just_check_reports_missing_command(repo):
     result = check_just(repo, ("comando-que-no-existe-xyz",))
     assert not result.passed
-    assert "no encontrado" in result.detail
+    assert "not found" in result.detail
 
 
 def test_grade_runs_only_declared_checks(repo, base):
@@ -214,7 +214,8 @@ def test_report_contains_lists_missing_terms(repo):
     spec = {"path": "reports/informe.md", "terms": ["problema", "fuga|leak", "999"]}
     result = check_report_contains(repo, spec)
     assert not result.passed
-    assert "fuga|leak" in result.detail and "999" in result.detail
+    assert "fuga|leak" in result.detail
+    assert "999" in result.detail
     assert "problema" not in result.detail
 
 

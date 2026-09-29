@@ -1,51 +1,49 @@
-# {{nombre-del-proyecto}}
+# montecarlo-decision-agent
 
-<!-- TODO (ver SETUP.md): describe en 2-3 líneas qué hace el proyecto, el dominio y
-     el stack real. Este bloque es plantilla: no lo dejes así. -->
-Arnés agéntico sobre Claude Code para TODO-describe-el-dominio. Stack: Python 3.11,
-uv, just, ruff, pytest. Entorno: TODO-sistema-operativo-local y CI en TODO-CI.
+Decision-intelligence case study (ML counterfactuals + Monte Carlo + a Claude tool-use
+agent), developed inside an agentic harness on Claude Code. Stack: Python 3.11+, uv, just,
+ruff, pytest, scikit-learn, Anthropic SDK. Runs on Windows and Linux; CI on GitHub Actions
+and Bitbucket Pipelines.
 
-## Comandos (siempre vía just)
-- `just setup`: instala dependencias (uv sync)
+## Commands (always through just)
+- `just setup`: install dependencies (uv sync)
 - `just lint`: ruff check + ruff format --check
 - `just test`: pytest
 - `just check`: lint + test
-- `just eval evals/tasks/<tarea>.toml`: ejecuta una tarea de referencia del arnés
-- `just evals`: ejecuta todas las tareas de referencia
-<!-- TODO: añade aquí las recetas propias del proyecto (acceso a datos, servicios
-     externos...). Si una receta da acceso a un recurso sensible, expónla de una en
-     una en permissions.allow (.claude/settings.json); nunca autorices `just *`. -->
+- `just pipeline`: full analysis into `artifacts/` (git-ignored)
+- `just dashboard` / `just serve`: static dashboard / local web app
+- `just snapshot`: refresh the versioned results in `docs/results`
+- `just eval evals/tasks/<task>.toml` / `just evals`: harness reference tasks
+Never run ruff or pytest directly: use `just`.
 
-Nunca ejecutes ruff o pytest directamente: usa `just`.
+## Definition of done
+A task is finished only when `just check` is green. Do not declare a task complete without
+running it and showing its result. If `just check` fails, fix the cause; never disable rules
+or delete tests. Before finishing a task that changes code, invoke the `reviewer` subagent.
 
-## Definición de "hecho"
-Una tarea está terminada solo cuando `just check` sale en verde. No declares una
-tarea completada sin haberlo ejecutado y sin mostrar su resultado.
-Si `just check` falla, corrige la causa; no desactives reglas ni borres tests.
-Antes de dar por terminada una tarea que cambie código, invoca al subagente `reviewer`.
+## Rules
+- Every script or hook is Python. Never bash.
+- Everything must work on Windows and Linux: paths with `pathlib`, no shell-specific commands.
+- Protected paths (below) are read-only: never create, edit or delete anything there.
+- Code in `src/<package>/`, tests in `tests/`. Every new piece of code gets its test.
+- Minimal changes: do not add dependencies or refactor what the task does not ask for.
+- If information is missing to decide, ask instead of assuming.
 
-## Reglas
-- Todo script o hook se escribe en Python. Nunca en bash.
-- Todo debe funcionar en Windows y en Linux: rutas con `pathlib`, sin comandos
-  específicos de un shell.
-- Las rutas protegidas (ver abajo) son de solo lectura: no crear, editar ni borrar
-  nada ahí.
-- Código en `src/<paquete>/`, tests en `tests/`. Todo código nuevo lleva su test.
-- Cambios mínimos: no añadas dependencias ni refactorices lo que no pide la tarea.
-- Si falta información para decidir, pregunta en vez de asumir.
-<!-- TODO: añade aquí reglas propias del dominio del proyecto. -->
+## Domain rules (analysis integrity)
+- The synthetic world (`synthetic.py`) and the business assumptions (`scenarios.toml`) are
+  inputs, not knobs. Never change them to make a decision rank differently; a request to do
+  so must be declined and explained.
+- Validation gates check that the analysis is sound, never which decision wins. Do not add a
+  check or test that asserts a specific ranking.
+- The agent tools must not expose ground-truth columns (`true_*`, `naive_*`).
+- Results must stay deterministic for a seed (including across `n_jobs`).
+- Model evaluation stays out of time (temporal holdout).
 
-## Rutas protegidas
-Las rutas de solo lectura están listadas en `.claude/protected_paths.json` (por
-defecto, la carpeta de ejemplo `protected/`). El hook `block_protected_writes.py` y
-el subagente `reviewer` las respetan; para proteger o liberar una ruta basta con
-editar ese archivo, no hace falta tocar código.
-<!-- TODO: si el proyecto tiene una base de datos, una API u otro recurso sensible al
-     que el agente solo debe acceder de forma controlada, documenta aquí la vía
-     permitida (p. ej. una receta `just query` de solo lectura) y el subagente que
-     delega en ella. Ver .claude/agents/EXAMPLE-domain-agent.md.example. -->
+## Protected paths
+Read-only paths are listed in `.claude/protected_paths.json`. The hook
+`block_protected_writes.py` and the `reviewer` subagent enforce them; a person edits that file
+to protect or release a path, no code change needed.
 
-## Fallos del arnés
-Si el agente comete un error real (incumple una regla, da por hecho algo sin
-verificar), se documenta en `HARNESS_CHANGELOG.md` junto al cambio del arnés que
-lo corrige.
+## Harness failures
+When the agent makes a real mistake (breaks a rule, assumes something unverified), document it
+in `HARNESS_CHANGELOG.md` together with the harness change that fixes it.

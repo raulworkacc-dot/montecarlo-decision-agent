@@ -1,8 +1,8 @@
 # Harness changelog
 
-Cada entrada: fallo real observado → cambio en el arnés que lo corrige. Se anotan
-fallos del **arnés** (reglas, hooks, permisos, subagentes), no bugs normales del
-código del proyecto.
+Each entry: real failure observed → harness change that fixes it. Only failures of the
+**harness** are recorded here (rules, hooks, permissions, subagents, evals), not ordinary bugs
+in the project code.
 
-| Fecha | Fallo observado | Cambio en el arnés |
+| Date | Observed failure | Harness change |
 |---|---|---|
