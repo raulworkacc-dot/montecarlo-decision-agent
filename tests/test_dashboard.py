@@ -76,3 +76,9 @@ def test_static_site(tmp_path, artifacts):
     assert names == ["index.html", "live.html", "live_status.js"]
     status = (tmp_path / "site" / "live_status.js").read_text(encoding="utf-8")
     assert '"phase": "completed"' in status
+
+
+def test_static_payload_never_calls_the_api(payload):
+    assert payload["mode"] == "static"
+    template = (dashboard.TEMPLATES_DIR / "mission_control.html").read_text(encoding="utf-8")
+    assert "PAYLOAD.mode === 'server'" in template

@@ -95,8 +95,12 @@ def current_memo(artifacts: Artifacts) -> dict[str, Any]:
 
 
 def build_payload(
-    artifacts: Artifacts, memo: dict[str, Any] | None = None, pace_seconds: float = 0.0
+    artifacts: Artifacts,
+    memo: dict[str, Any] | None = None,
+    pace_seconds: float = 0.0,
+    mode: str = "static",
 ) -> dict[str, Any]:
+    """Everything the dashboard renders. ``mode`` is "server" only for the local app."""
     memo = memo or current_memo(artifacts)
     dataset = artifacts.dataset
     converted = dataset[dataset["converted_to_sale"] == 1]
@@ -116,6 +120,7 @@ def build_payload(
         .reset_index()
     )
     return {
+        "mode": mode,
         "title": "Agente de Decision Comercial",
         "subtitle": (
             "Analiza el historico, estima el uplift de cada iniciativa, simula miles de futuros "

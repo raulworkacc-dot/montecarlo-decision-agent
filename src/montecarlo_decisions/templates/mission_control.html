@@ -1065,7 +1065,8 @@
       riesgo: 'Prioriza control del downside, robustez del suelo y criterios de contencion.',
     };
     const API_BASE = window.location.protocol.startsWith('http') ? window.location.origin : '';
-    const BACKEND_ENABLED = Boolean(API_BASE);
+    // Only the local app (`mcd serve`) has an API; a static host such as GitHub Pages does not.
+    let backendEnabled = PAYLOAD.mode === 'server' && Boolean(API_BASE);
     const PRECOMPUTED_STAGE_KEYS = new Set(['briefing', 'ingesta', 'uplift']);
     const state = {
       activeStage: 'briefing',
@@ -1491,8 +1492,8 @@
     }
 
     async function hydratePayload() {
-      if (!BACKEND_ENABLED) {
-        setConsoleBadges('Modo local', 'ready', 'Sin backend', '');
+      if (!backendEnabled) {
+        setConsoleBadges('Demo estatica', 'ready', 'Resultados precalculados', '');
         return;
       }
       try {
@@ -1511,6 +1512,7 @@
           beginMontecarloPolling();
         }
       } catch (error) {
+        backendEnabled = false;  // degrade to the embedded, precomputed results
         setConsoleBadges('Modo local', 'alert', 'Backend no accesible', 'alert');
       }
     }
@@ -1524,7 +1526,7 @@
         clearTimeout(state.autoTimer);
       }
 
-      if (!BACKEND_ENABLED) {
+      if (!backendEnabled) {
         activateStage(stageKey, options.instant === true);
         return;
       }
@@ -1708,7 +1710,7 @@
         clearInterval(state.montecarloPollHandle);
         state.montecarloPollHandle = null;
         activateStage('briefing', true);
-        setConsoleBadges(BACKEND_ENABLED ? 'Backend online' : 'Modo local', 'ready', BACKEND_ENABLED ? 'Consola lista' : 'Sin backend', BACKEND_ENABLED ? 'ready' : '');
+        setConsoleBadges(backendEnabled ? 'Backend online' : 'Modo local', 'ready', backendEnabled ? 'Consola lista' : 'Sin backend', backendEnabled ? 'ready' : '');
       });
       const liveFrame = document.getElementById('live-frame');
       if (liveFrame) {

@@ -173,3 +173,9 @@ def test_claude_failure_falls_back_to_rules(prepared, artifacts, monkeypatch):
     response = app.stage("reporte")
     assert response["payload"]["recommendation"]["memo_source"]["author"] == "rules"
     assert not artifacts.paths.agent_memo.exists()
+
+
+def test_served_payload_enables_the_api(server):
+    base, _ = server
+    payload = json.loads(request(f"{base}/api/payload")[2])["payload"]
+    assert payload["mode"] == "server"

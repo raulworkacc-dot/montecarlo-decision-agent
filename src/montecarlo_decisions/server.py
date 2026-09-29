@@ -162,7 +162,7 @@ class MissionControl:
             if with_agent
             else load_memo(self.paths.agent_memo, self.artifacts().fingerprint)
         )
-        return build_payload(self.artifacts(), memo, self.pace_seconds)
+        return build_payload(self.artifacts(), memo, self.pace_seconds, mode="server")
 
     def status(self) -> dict[str, Any]:
         with self.lock:
