@@ -82,3 +82,4 @@ def test_static_payload_never_calls_the_api(payload):
     assert payload["mode"] == "static"
     template = (dashboard.TEMPLATES_DIR / "mission_control.html").read_text(encoding="utf-8")
     assert "PAYLOAD.mode === 'server'" in template
+    assert "Resultados del último despliegue" in template

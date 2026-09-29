@@ -1493,7 +1493,7 @@
 
     async function hydratePayload() {
       if (!backendEnabled) {
-        setConsoleBadges('Demo estatica', 'ready', 'Resultados precalculados', '');
+        setConsoleBadges('Demo estática', 'ready', 'Resultados del último despliegue', '');
         return;
       }
       try {
@@ -1710,7 +1710,9 @@
         clearInterval(state.montecarloPollHandle);
         state.montecarloPollHandle = null;
         activateStage('briefing', true);
-        setConsoleBadges(backendEnabled ? 'Backend online' : 'Modo local', 'ready', backendEnabled ? 'Consola lista' : 'Sin backend', backendEnabled ? 'ready' : '');
+        if (backendEnabled) setConsoleBadges('Backend online', 'ready', 'Consola lista', 'ready');
+        else if (PAYLOAD.mode === 'static') setConsoleBadges('Demo estática', 'ready', 'Resultados del último despliegue', '');
+        else setConsoleBadges('Modo local', 'ready', 'Sin backend', '');
       });
       const liveFrame = document.getElementById('live-frame');
       if (liveFrame) {
